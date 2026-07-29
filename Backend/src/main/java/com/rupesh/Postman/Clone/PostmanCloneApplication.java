@@ -9,5 +9,4 @@ public class PostmanCloneApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(PostmanCloneApplication.class, args);
 	}
-
 }
