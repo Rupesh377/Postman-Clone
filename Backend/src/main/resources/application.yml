@@ -1,0 +1,4 @@
+jwt:
+  secret: 8sN0dL3fY6mPqW2vBx1Rk9JcH5ZtAu7XeLmN4QpVsY8
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000

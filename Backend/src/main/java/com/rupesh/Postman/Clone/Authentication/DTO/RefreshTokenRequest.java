@@ -1,6 +1,9 @@
 package com.rupesh.Postman.Clone.Authentication.DTO;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+@Data
 
 public class RefreshTokenRequest {
 

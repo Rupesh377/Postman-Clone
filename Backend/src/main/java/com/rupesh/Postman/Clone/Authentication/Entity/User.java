@@ -1,12 +1,12 @@
 package com.rupesh.Postman.Clone.Authentication.Entity;
 
+import com.rupesh.Postman.Clone.Authentication.Enum.AuthProvider;
 import com.rupesh.Postman.Clone.Authentication.Enum.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.security.AuthProvider;
 import java.time.LocalDateTime;
 import java.util.UUID;
 

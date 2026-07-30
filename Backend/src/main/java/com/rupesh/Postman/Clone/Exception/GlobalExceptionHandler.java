@@ -38,7 +38,6 @@ public class GlobalExceptionHandler  {
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
-
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
@@ -65,7 +64,6 @@ public class GlobalExceptionHandler  {
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
-
         return ResponseEntity.badRequest().body(response);
     }
 
@@ -79,7 +77,6 @@ public class GlobalExceptionHandler  {
                 .message("Something went wrong.")
                 .path(request.getRequestURI())
                 .build();
-
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
