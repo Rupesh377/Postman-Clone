@@ -6,20 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="0b58656a-cdb7-44e7-bf39-39dbefcf5a83" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/AuthResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/AuthResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/LoginRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/LoginRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/RefreshTokenRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/RefreshTokenRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/RegisterRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/RegisterRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/UserResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/UserResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Entity/User.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Repository/RefreshTokenRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Repository/RefreshTokenRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Repository/UserRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/AuthService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/JwtService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/JwtService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/RefreshTokenService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/RefreshTokenService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Exception/GlobalExceptionHandler.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
