@@ -33,11 +33,9 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
 
         Boolean check = userRepository.existsByEmail(request.getEmail());
-
         if (check) {
             throw new DuplicateResourceException("Email is already registered.");
         }
-
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
