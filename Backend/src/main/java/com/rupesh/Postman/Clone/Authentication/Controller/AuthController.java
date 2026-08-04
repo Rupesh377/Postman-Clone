@@ -1,11 +1,9 @@
 package com.rupesh.Postman.Clone.Authentication.Controller;
 
-import com.rupesh.Postman.Clone.Authentication.DTO.AuthResponse;
-import com.rupesh.Postman.Clone.Authentication.DTO.LoginRequest;
-import com.rupesh.Postman.Clone.Authentication.DTO.RefreshTokenRequest;
-import com.rupesh.Postman.Clone.Authentication.DTO.RegisterRequest;
+import com.rupesh.Postman.Clone.Authentication.DTO.*;
 import com.rupesh.Postman.Clone.Authentication.Security.CustomUserDetails;
 import com.rupesh.Postman.Clone.Authentication.Service.AuthService;
+import com.rupesh.Postman.Clone.Authentication.Service.ForgetPasswordService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final ForgetPasswordService forgetPasswordService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -44,5 +43,17 @@ public class AuthController {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         authService.logout(userDetails.getUser());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgetPasswordRequest request) {
+        forgetPasswordService.forgotPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        forgetPasswordService.resetPassword(request);
+        return ResponseEntity.ok().build();
     }
 }
