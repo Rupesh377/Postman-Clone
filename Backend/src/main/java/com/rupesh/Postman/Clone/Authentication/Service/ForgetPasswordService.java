@@ -27,8 +27,7 @@ public class ForgetPasswordService {
     private final PasswordEncoder passwordEncoder;
 
     public void forgotPassword(ForgetPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElse(null);
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
         if (user == null) {
             return;
         }

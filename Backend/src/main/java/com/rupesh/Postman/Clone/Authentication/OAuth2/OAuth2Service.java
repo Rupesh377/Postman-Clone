@@ -48,8 +48,7 @@ public class OAuth2Service {
 
         String accessToken = jwtService.generateAccessToken(user);
 
-        RefreshToken refreshToken =
-                refreshTokenService.createRefreshToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
                 .accessToken(accessToken)

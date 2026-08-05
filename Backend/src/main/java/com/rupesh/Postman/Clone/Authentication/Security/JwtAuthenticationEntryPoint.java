@@ -18,9 +18,7 @@ import java.time.LocalDateTime;
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
-    public void commence(HttpServletRequest request,
-                         HttpServletResponse response,
-                         AuthenticationException authException)
+    public void commence(HttpServletRequest request,HttpServletResponse response, AuthenticationException authException)
             throws IOException, ServletException {
 
         ErrorResponse error = ErrorResponse.builder()
