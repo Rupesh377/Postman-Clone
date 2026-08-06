@@ -5,6 +5,7 @@ import com.rupesh.Postman.Clone.Authentication.Entity.RefreshToken;
 import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Authentication.Enum.AuthProvider;
 import com.rupesh.Postman.Clone.Authentication.Enum.Role;
+import com.rupesh.Postman.Clone.Authentication.Repository.RefreshTokenRepository;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
 import com.rupesh.Postman.Clone.Exception.BadRequestException;
 import com.rupesh.Postman.Clone.Exception.DuplicateResourceException;
@@ -26,6 +27,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -75,6 +77,7 @@ public class AuthService {
         if (user.getProvider() != AuthProvider.LOCAL) {
             throw new BadRequestException("Please login using " + user.getProvider());
         }
+        refreshTokenRepository.deleteByUser(user);
 
         String accessToken = jwtService.generateAccessToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
