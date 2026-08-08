@@ -1,4 +1,9 @@
 package com.rupesh.Postman.Clone.WorkspaceMember;
 
-public class WorkspaceRole {
+public enum WorkspaceRole {
+
+    OWNER,
+    ADMIN,
+    EDITOR,
+    VIEWER
 }

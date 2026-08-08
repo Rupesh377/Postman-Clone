@@ -2,6 +2,12 @@ package com.rupesh.Postman.Clone.Workspace;
 
 import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
+import com.rupesh.Postman.Clone.Exception.ForbiddenException;
+import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
+import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMember;
+import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMemberRepository;
+import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMemberService;
+import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceRole;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -13,32 +19,52 @@ public class WorkspaceService {
 
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
 
-    public WorkspaceService(WorkspaceRepository workspaceRepository, UserRepository userRepository) {
+    public WorkspaceService(WorkspaceRepository workspaceRepository, UserRepository userRepository, WorkspaceMemberRepository workspaceMemberRepository) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
+        this.workspaceMemberRepository = workspaceMemberRepository;
     }
 
     public WorkspaceResponseDTO createWorkspace(WorkspaceRequestDTO request, Authentication authentication) {
 
         String email = authentication.getName();
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Workspace workspace = Mapper.toEntity(request);
         workspace.setOwner(owner);
 
-        workspaceRepository.save(workspace);
-        return Mapper.toDTO(workspace);
+        Workspace savedWorkspace = workspaceRepository.save(workspace);
+
+        WorkspaceMember ownerMember = new WorkspaceMember();
+
+        ownerMember.setWorkspace(savedWorkspace);
+        ownerMember.setUser(owner);
+        ownerMember.setRole(WorkspaceRole.OWNER);
+
+        workspaceMemberRepository.save(ownerMember);
+        return Mapper.toDTO(savedWorkspace);
     }
 
     public List<WorkspaceResponseDTO> getMyWorkspaces(Authentication authentication) {
 
         String email = authentication.getName();
-        User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        return workspaceRepository.findByOwner(owner).stream().map(Mapper::toDTO).toList();
+
+        List<Workspace> ownedWorkspaces = workspaceRepository.findByOwner(user);
+
+        List<Workspace> memberWorkspaces = workspaceMemberRepository.findByUser(user)
+                        .stream()
+                        .map(WorkspaceMember::getWorkspace)
+                        .toList();
+
+
+        return java.util.stream.Stream.concat(ownedWorkspaces.stream(), memberWorkspaces.stream())
+                .distinct().map(Mapper::toDTO).toList();
     }
 
     public WorkspaceResponseDTO getWorkspace(Long workspaceId, Authentication authentication) {
@@ -68,13 +94,13 @@ public class WorkspaceService {
 
         String email = authentication.getName();
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new EntityNotFoundException("Workspace not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
         if (!workspace.getOwner().getId().equals(owner.getId())) {
-            throw new RuntimeException("You are not the owner of this workspace.");
+            throw new ForbiddenException("You are not the owner of this workspace.");
         }
         return workspace;
     }
