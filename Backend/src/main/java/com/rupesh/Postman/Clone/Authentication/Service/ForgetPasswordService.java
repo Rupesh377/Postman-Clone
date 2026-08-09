@@ -42,7 +42,7 @@ public class ForgetPasswordService {
                         .build();
         tokenRepository.deleteByUser(user);
         tokenRepository.save(forgotPasswordToken);
-        String link = "http://localhost:8080/reset-password?token=" + token;
+        String link = "http://localhost:5173/reset-password?token=" + token;
         emailService.sendPasswordResetEmail(user.getEmail(), link);
     }
 
