@@ -7,7 +7,6 @@ import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Authentication.Repository.ForgetPasswordTokenRepository;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
 import com.rupesh.Postman.Clone.Exception.BadRequestException;
-import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;

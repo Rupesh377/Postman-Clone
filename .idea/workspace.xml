@@ -5,12 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0b58656a-cdb7-44e7-bf39-39dbefcf5a83" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/LoginRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/DTO/LoginRequest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/OAuth2/OAuth2Service.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/OAuth2/OAuth2Service.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Security/JwtAuthenticationEntryPoint.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Security/JwtAuthenticationEntryPoint.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Security/JwtAutheticationFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Security/JwtAutheticationFilter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/AuthService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/ForgetPasswordService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/ForgetPasswordService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/Frontend/package-lock.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

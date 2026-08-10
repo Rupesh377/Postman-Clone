@@ -4,12 +4,14 @@ import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
 public class Workspace {
@@ -37,9 +39,6 @@ public class Workspace {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
-
-    public Workspace() {
-    }
 
     @PrePersist
     public void onCreate() {

@@ -10,6 +10,7 @@ import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
 import com.rupesh.Postman.Clone.Exception.BadRequestException;
 import com.rupesh.Postman.Clone.Exception.DuplicateResourceException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -70,7 +71,7 @@ public class AuthService {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        } catch (BadRequestException e) {
+        } catch (BadCredentialsException e) {
             throw new BadRequestException("Invalid email or password");
         }
         User user = userRepository.findByEmail(request.getEmail())
