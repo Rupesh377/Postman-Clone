@@ -68,7 +68,6 @@ public class WorkspaceService {
     }
 
     public WorkspaceResponseDTO getWorkspace(Long workspaceId, Authentication authentication) {
-
         Workspace workspace = getOwnedWorkspace(workspaceId, authentication);
         return Mapper.toDTO(workspace);
     }

@@ -154,8 +154,7 @@ public class WorkspaceMemberService {
         }
 
         if (!memberRepository.existsByWorkspaceAndUser(workspace, currentUser )){
-            throw new SecurityException("You do not have access to this workspace"
-            );
+            throw new SecurityException("You do not have access to this workspace");
         }
     }
 }

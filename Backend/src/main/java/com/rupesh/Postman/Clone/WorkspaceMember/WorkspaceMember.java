@@ -5,6 +5,7 @@ import com.rupesh.Postman.Clone.Workspace.Workspace;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "workspace_members", uniqueConstraints = {@UniqueConstraint(columnNames = {"workspace_id", "user_id"})})
 public class WorkspaceMember {
 
@@ -34,9 +36,6 @@ public class WorkspaceMember {
 
     @Column(nullable = false)
     private LocalDateTime joinedAt;
-
-    public WorkspaceMember() {
-    }
 
     @PrePersist
     public void onCreate() {
