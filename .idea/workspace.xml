@@ -12,7 +12,6 @@
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Security/JwtAutheticationFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Security/JwtAutheticationFilter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/AuthService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/ForgetPasswordService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/ForgetPasswordService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/Frontend/package-lock.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,6 +22,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="package-info" />
+        <option value="Interface" />
         <option value="Class" />
       </list>
     </option>
@@ -53,19 +53,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_MARK_IGNORED_FILES_AS_EXCLUDED&quot;: &quot;true&quot;,
-    &quot;Application.PostmanCloneApplication.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Notification.DisplayName-DoNotAsk-WindowsDefender&quot;: &quot;Microsoft Defender may affect IDE&quot;,
-    &quot;Notification.DoNotAsk-WindowsDefender&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/Projects/Postman-Clone&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
+    "Application.PostmanCloneApplication.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Notification.DisplayName-DoNotAsk-WindowsDefender": "Microsoft Defender may affect IDE",
+    "Notification.DoNotAsk-WindowsDefender": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "D:/Projects/Postman-Clone",
+    "settings.editor.selected.configurable": "preferences.lookFeel"
   }
-}</component>
+}]]></component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="0b58656a-cdb7-44e7-bf39-39dbefcf5a83" name="Changes" comment="" />
