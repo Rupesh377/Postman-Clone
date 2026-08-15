@@ -20,11 +20,8 @@ public class CollectionService {
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
 
-    public CollectionService(
-            CollectionRepository collectionRepository,
-            WorkspaceRepository workspaceRepository,
-            UserRepository userRepository
-    ) {
+    public CollectionService(CollectionRepository collectionRepository, WorkspaceRepository workspaceRepository,
+                             UserRepository userRepository) {
         this.collectionRepository = collectionRepository;
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
@@ -33,7 +30,6 @@ public class CollectionService {
     public CollectionResponseDTO createCollection(Long workspaceId, CollectionRequestDTO request,
             Authentication authentication) {
         Workspace workspace = getOwnedWorkspace(workspaceId, authentication);
-
         Collection collection = new Collection();
         collection.setName(request.getName());
         collection.setDescription(request.getDescription());
@@ -47,7 +43,6 @@ public class CollectionService {
     public List<CollectionResponseDTO> getCollections(Long workspaceId, Authentication authentication) {
 
         Workspace workspace = getOwnedWorkspace(workspaceId, authentication);
-
         return collectionRepository.findByWorkspace(workspace)
                 .stream()
                 .map(Mapper::toDTO)
@@ -73,7 +68,6 @@ public class CollectionService {
 
 
         getOwnedWorkspace(collection.getWorkspace().getId(), authentication);
-
         collection.setName(request.getName());
         collection.setDescription(request.getDescription());
         Collection updatedCollection = collectionRepository.save(collection);
@@ -86,7 +80,6 @@ public class CollectionService {
 
         Collection collection = collectionRepository.findById(collectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Collection not found"));
-
         getOwnedWorkspace(collection.getWorkspace().getId(), authentication);
         collectionRepository.delete(collection);
     }
@@ -106,4 +99,5 @@ public class CollectionService {
         }
         return workspace;
     }
+
 }

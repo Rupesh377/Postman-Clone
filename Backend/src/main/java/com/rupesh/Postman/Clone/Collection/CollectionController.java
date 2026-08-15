@@ -27,7 +27,8 @@ public class CollectionController {
     }
 
     @GetMapping("/workspaces/{workspaceId}/collections")
-    public ResponseEntity<List<CollectionResponseDTO>> getCollections(@PathVariable Long workspaceId, Authentication authentication) {
+    public ResponseEntity<List<CollectionResponseDTO>> getCollectionsByWorkspace(@PathVariable Long workspaceId
+            , Authentication authentication) {
         return ResponseEntity.ok(collectionService.getCollections(workspaceId,authentication));
     }
 
@@ -48,9 +49,4 @@ public class CollectionController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/workspaces/{workspaceId}/collections")
-    public ResponseEntity<List<CollectionResponseDTO>> getCollectionsByWorkspace(
-            @PathVariable Long workspaceId, Authentication authentication) {
-        return ResponseEntity.ok(collectionService.getCollectionsByWorkspace(workspaceId, authentication));
-    }
 }
