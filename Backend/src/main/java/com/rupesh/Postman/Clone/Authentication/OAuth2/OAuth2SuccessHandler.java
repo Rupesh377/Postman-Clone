@@ -5,6 +5,7 @@ import com.rupesh.Postman.Clone.Authentication.Enum.AuthProvider;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
 import com.rupesh.Postman.Clone.Authentication.Service.JwtService;
 import com.rupesh.Postman.Clone.Authentication.Service.RefreshTokenService;
+import com.rupesh.Postman.Clone.Exception.BadRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,8 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
 @RequiredArgsConstructor
@@ -36,9 +39,17 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String name = oAuthUser.getAttribute("name");
 
         AuthProvider provider = registrationId.equals("google") ? AuthProvider.GOOGLE : AuthProvider.GITHUB;
+        AuthResponse authResponse;
 
-        AuthResponse authResponse = oAuth2Service.login(email, name, provider);
+        try {
+            authResponse = oAuth2Service.login(email, name, provider);
+        } catch (BadRequestException ex) {
+            String errorMessage = URLEncoder.encode(ex.getMessage(), StandardCharsets.UTF_8);
+            String redirectUrl = "http://localhost:5173/login?error=" + errorMessage;
 
+            getRedirectStrategy().sendRedirect(request, response, redirectUrl);
+            return;
+        }
         String redirectUrl = "http://localhost:5173/oauth/success"
                         + "?accessToken=" + authResponse.getAccessToken()
                         + "&refreshToken=" + authResponse.getRefreshToken();

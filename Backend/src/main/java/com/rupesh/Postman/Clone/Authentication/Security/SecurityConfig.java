@@ -1,5 +1,6 @@
 package com.rupesh.Postman.Clone.Authentication.Security;
 
+import com.rupesh.Postman.Clone.Authentication.OAuth2.CustomOAuth2UserService;
 import com.rupesh.Postman.Clone.Authentication.OAuth2.OAuth2FailureHandler;
 import com.rupesh.Postman.Clone.Authentication.OAuth2.OAuth2SuccessHandler;
 import com.rupesh.Postman.Clone.Config.Config;
@@ -22,6 +23,8 @@ public class SecurityConfig {
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
     private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final CustomOAuth2UserService customOAuth2UserService;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -29,15 +32,17 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**","/oauth2/**")
+                        .permitAll()
                         .anyRequest().authenticated())
 
-                .oauth2Login(oauth -> oauth
+                .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
-                        .failureHandler(oAuth2FailureHandler))
+                        .failureHandler(oAuth2FailureHandler)
+                        .userInfoEndpoint(userInfo ->
+                                userInfo.userService(customOAuth2UserService)))
 
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(authenticationEntryPoint))
