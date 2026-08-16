@@ -68,18 +68,20 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
 
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        } catch (BadCredentialsException e) {
-            throw new BadRequestException("Invalid email or password");
-        }
+
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(()->new ResourceNotFoundException("User not found."));
 
         if (user.getProvider() != AuthProvider.LOCAL) {
             throw new BadRequestException("Please login using " + user.getProvider());
         }
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        } catch (BadCredentialsException e) {
+            throw new BadRequestException("Invalid email or password");
+        }
+
         refreshTokenRepository.deleteByUser(user);
 
         String accessToken = jwtService.generateAccessToken(user);

@@ -27,8 +27,10 @@ public class OAuth2Service {
 
     public AuthResponse login(String email, String name, AuthProvider provider) {
 
+
         User user;
         Optional<User> existingUser = userRepository.findByEmail(email);
+
         if (existingUser.isPresent()) {
             user = existingUser.get();
 
@@ -44,10 +46,9 @@ public class OAuth2Service {
                     .emailVerified(true)
                     .build();
             userRepository.save(user);
+
         }
-
         String accessToken = jwtService.generateAccessToken(user);
-
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -63,5 +64,4 @@ public class OAuth2Service {
                         .build())
                 .build();
     }
-
 }
