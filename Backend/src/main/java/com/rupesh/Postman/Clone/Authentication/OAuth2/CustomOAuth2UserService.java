@@ -1,5 +1,4 @@
 package com.rupesh.Postman.Clone.Authentication.OAuth2;
-
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -18,8 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class CustomOAuth2UserService
-        implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
+public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
     private final DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
     private final RestTemplate restTemplate = new RestTemplate();
