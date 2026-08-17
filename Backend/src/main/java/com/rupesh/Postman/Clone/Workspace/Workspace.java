@@ -2,6 +2,7 @@ package com.rupesh.Postman.Clone.Workspace;
 
 import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Collection.Collection;
+import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMember;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -35,6 +37,9 @@ public class Workspace {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
+
+    @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkspaceMember> members = new ArrayList<>();
 
     @OneToMany(mappedBy = "workspace")
     private List<Collection> collections;

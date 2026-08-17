@@ -3,6 +3,8 @@ package com.rupesh.Postman.Clone.Workspace;
 import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
 import com.rupesh.Postman.Clone.Collection.CollectionResponseDTO;
+import com.rupesh.Postman.Clone.Exception.BadRequestException;
+import com.rupesh.Postman.Clone.Exception.DuplicateResourceException;
 import com.rupesh.Postman.Clone.Exception.ForbiddenException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMember;
@@ -12,6 +14,7 @@ import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceRole;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -28,26 +31,29 @@ public class WorkspaceService {
         this.workspaceMemberRepository = workspaceMemberRepository;
     }
 
+    @Transactional
     public WorkspaceResponseDTO createWorkspace(WorkspaceRequestDTO request, Authentication authentication) {
 
         String email = authentication.getName();
         User owner = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        if (workspaceRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Workspace with same name already exists. Try with a new name.");
+        }
+
         Workspace workspace = Mapper.toEntity(request);
         workspace.setOwner(owner);
 
-        Workspace savedWorkspace = workspaceRepository.save(workspace);
-
         WorkspaceMember ownerMember = new WorkspaceMember();
-
-        ownerMember.setWorkspace(savedWorkspace);
+        ownerMember.setWorkspace(workspace);
         ownerMember.setUser(owner);
         ownerMember.setRole(WorkspaceRole.OWNER);
-
-        workspaceMemberRepository.save(ownerMember);
+        workspace.getMembers().add(ownerMember);
+        Workspace savedWorkspace = workspaceRepository.save(workspace);
         return Mapper.toDTO(savedWorkspace);
     }
+
 
     public List<WorkspaceResponseDTO> getMyWorkspaces(Authentication authentication) {
 
@@ -73,9 +79,9 @@ public class WorkspaceService {
         return Mapper.toDTO(workspace);
     }
 
+    @Transactional
     public WorkspaceResponseDTO updateWorkspace(Long workspaceId, WorkspaceRequestDTO request,
                                                 Authentication authentication) {
-
         Workspace workspace = getOwnedWorkspace(workspaceId, authentication);
         workspace.setName(request.getName());
         workspace.setDescription(request.getDescription());
