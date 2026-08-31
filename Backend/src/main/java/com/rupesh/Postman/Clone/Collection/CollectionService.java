@@ -82,6 +82,7 @@ public class CollectionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Collection not found"));
         getOwnedWorkspace(collection.getWorkspace().getId(), authentication);
         collectionRepository.delete(collection);
+
     }
 
 
