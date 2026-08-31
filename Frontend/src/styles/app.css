@@ -52,6 +52,38 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.topbar-title--editable {
+  cursor: text;
+  border-radius: 4px;
+  padding: 2px 4px;
+  transition: background var(--transition);
+}
+.topbar-title--editable:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+}
+
+.topbar-title-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 300px;
+  height: 28px;
+  padding: 0 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-focus);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255,108,55,0.15);
 }
 
 .topbar-actions {
@@ -254,6 +286,29 @@
 
 .tree-children {
   padding-left: 16px;
+}
+
+.tree-hint {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+/* Inline rename input in tree */
+.tree-inline-edit {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-focus);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255,108,55,0.12);
 }
 
 .method-badge {

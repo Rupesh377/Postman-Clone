@@ -151,6 +151,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
   const [response, setResponse] = useState(null) // { status, statusText, time, size, body, headers }
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState(null)
+  const [activeRespTab, setActiveRespTab] = useState('body')
 
   // Save state
   const [saving, setSaving] = useState(false)
@@ -354,7 +355,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
         </button>
       </div>
 
-      {/* Tabs */}
+      {/* Request tabs */}
       <div className="tabs" role="tablist">
         {[
           { id: 'params',  label: 'Params',  count: paramCount },
@@ -388,14 +389,14 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
           <KVTable
             pairs={headers}
             onChange={setHeaders}
-            keyPlaceholder="Content-Type"
-            valuePlaceholder="application/json"
+            keyPlaceholder="Authorization"
+            valuePlaceholder="Bearer token or header value"
           />
         )}
         {activeTab === 'body' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-subtle)' }}>
-              Raw body — JSON, text, or any format your API expects.
+              Raw body — paste JSON, form data, or any format your endpoint expects.
             </div>
             <textarea
               className="body-editor"
@@ -411,8 +412,32 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
 
       {/* Response panel */}
       <div className="response-panel">
+        {/* Status bar */}
         <div className="response-header">
-          <span className="response-title">Response</span>
+          <div className="tabs" style={{ flex: 1, border: 'none', padding: 0, background: 'transparent' }} role="tablist">
+            <button
+              className={`tab-btn ${activeRespTab === 'body' ? 'active' : ''}`}
+              onClick={() => setActiveRespTab('body')}
+              role="tab"
+              aria-selected={activeRespTab === 'body'}
+              style={{ fontSize: '12px', padding: '8px 12px' }}
+            >
+              Body
+            </button>
+            <button
+              className={`tab-btn ${activeRespTab === 'respHeaders' ? 'active' : ''}`}
+              onClick={() => setActiveRespTab('respHeaders')}
+              role="tab"
+              aria-selected={activeRespTab === 'respHeaders'}
+              style={{ fontSize: '12px', padding: '8px 12px' }}
+            >
+              Headers
+              {response?.headers && Object.keys(response.headers).length > 0 && (
+                <span className="tab-badge">{Object.keys(response.headers).length}</span>
+              )}
+            </button>
+          </div>
+
           {response && (
             <div className="response-meta">
               {response.status && (
@@ -436,21 +461,53 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
           )}
         </div>
 
+        {/* Response body */}
         {sendError && (
-          <div className="response-body" style={{ color: 'var(--error)' }}>{sendError}</div>
+          <div className="response-body" style={{ color: 'var(--error)' }}>
+            {sendError}
+            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-subtle)' }}>
+              Check that the server is reachable and CORS is configured for this origin.
+            </div>
+          </div>
         )}
 
         {!response && !sendError && (
           <div className="response-empty">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-subtle)' }}>
-              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+              style={{ color: 'var(--text-subtle)', marginBottom: '4px' }}>
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
-            Hit <strong style={{ color: 'var(--text-muted)' }}>Send</strong> to see the response here
+            <span>Enter a URL and hit <strong style={{ color: 'var(--text-muted)' }}>Send</strong></span>
+            <span style={{ fontSize: '12px' }}>The response will appear here</span>
           </div>
         )}
 
-        {response?.body != null && (
-          <div className="response-body" aria-live="polite">{response.body}</div>
+        {response && activeRespTab === 'body' && (
+          <div className="response-body" aria-live="polite">
+            {response.body ?? <span style={{ color: 'var(--text-subtle)', fontStyle: 'italic' }}>Empty response body</span>}
+          </div>
+        )}
+
+        {response && activeRespTab === 'respHeaders' && (
+          <div className="tab-content" style={{ padding: '12px 16px' }}>
+            {Object.keys(response.headers || {}).length === 0 ? (
+              <div style={{ fontSize: '13px', color: 'var(--text-subtle)' }}>No headers returned</div>
+            ) : (
+              <table className="kv-table">
+                <thead>
+                  <tr><th>Header</th><th>Value</th></tr>
+                </thead>
+                <tbody>
+                  {Object.entries(response.headers).map(([k, v]) => (
+                    <tr key={k}>
+                      <td><span className="kv-input" style={{ background: 'none', border: 'none', color: 'var(--orange)', fontWeight: 500 }}>{k}</span></td>
+                      <td><span className="kv-input" style={{ background: 'none', border: 'none' }}>{v}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         )}
       </div>
     </div>
