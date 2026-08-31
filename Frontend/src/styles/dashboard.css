@@ -1,0 +1,206 @@
+/* ── Dashboard page ───────────────────────────────────────── */
+
+/* Header row */
+.dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.dash-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+
+.dash-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.dash-new-btn {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Grid — intentionally slightly varied: 3 on wide, 2 on medium, 1 on mobile */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+/* Skeleton */
+.dash-skeleton {
+  min-height: 148px;
+  background: linear-gradient(90deg, var(--bg-panel) 25%, var(--bg-card) 50%, var(--bg-panel) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+  pointer-events: none;
+  border: 1px solid var(--border);
+}
+@keyframes skeleton-sweep {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Empty state */
+.dash-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 64px 24px;
+  gap: 12px;
+}
+.dash-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  background: rgba(255,108,55,0.08);
+  border: 1px solid rgba(255,108,55,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--orange);
+  margin-bottom: 8px;
+}
+.dash-empty-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+.dash-empty-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 300px;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+/* ── Workspace card overrides ─────────────────────────────── */
+
+/* Top strip inside card */
+.ws-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+/* Action buttons — hidden until hover */
+.ws-card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.workspace-card:hover .ws-card-actions,
+.workspace-card:focus-within .ws-card-actions {
+  opacity: 1;
+}
+
+.ws-card-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-subtle);
+  padding: 4px 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color var(--transition), background var(--transition);
+  cursor: pointer;
+}
+.ws-card-action-btn:hover:not(:disabled) {
+  color: #ef4444;
+  background: rgba(239,68,68,0.1);
+}
+.ws-card-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Deleting state */
+.workspace-card--deleting {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Mini spinner for delete in-progress */
+.ws-card-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Card name inline edit */
+.ws-card-name-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-focus);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255,108,55,0.12);
+}
+
+/* Card footer */
+.ws-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.ws-card-open-hint {
+  font-size: 11px;
+  color: var(--text-subtle);
+  opacity: 0;
+  transition: opacity var(--transition);
+  white-space: nowrap;
+}
+.workspace-card:hover .ws-card-open-hint {
+  opacity: 1;
+  color: var(--orange);
+}
+
+/* New workspace card extra hint */
+.ws-card-new-hint {
+  font-size: 12px;
+  color: var(--text-subtle);
+  text-align: center;
+  margin-top: -4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .dash-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dash-new-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+}

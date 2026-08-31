@@ -373,14 +373,11 @@ export default function WorkspacePage() {
 
         {/* Main body: sidebar + content */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-          {/* Mobile overlay */}
+          {/* Mobile backdrop — tap to close sidebar */}
           {!sidebarCollapsed && (
             <div
-              className="sidebar-overlay"
+              className="sidebar-backdrop"
               onClick={() => setSidebar(true)}
-              style={{
-                display: 'none',
-              }}
             />
           )}
 
