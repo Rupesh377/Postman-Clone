@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWorkspace } from '../context/WorkspaceContext'
 import { deleteRequestApi } from '../api/requestApi'
+import { updateCollectionApi, updateFolderApi } from '../api/collectionApi'
 import Modal from './Modal'
 import '../styles/app.css'
 
@@ -78,8 +79,51 @@ function RequestItem({ request, active, onSelect, onDelete }) {
   )
 }
 
+// ── Inline editable label ─────────────────────────────────────
+function InlineEdit({ value, onSave, className }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal]         = useState(value)
+  const inputRef              = useRef(null)
+
+  useEffect(() => { if (!editing) setVal(value) }, [value, editing])
+
+  const start = (e) => { e.stopPropagation(); setEditing(true); setTimeout(() => inputRef.current?.select(), 0) }
+  const commit = () => {
+    setEditing(false)
+    const t = val.trim()
+    if (t && t !== value) onSave(t)
+    else setVal(value)
+  }
+  const onKey = (e) => {
+    e.stopPropagation()
+    if (e.key === 'Enter')  commit()
+    if (e.key === 'Escape') { setEditing(false); setVal(value) }
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        className="tree-inline-edit"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={onKey}
+        onClick={(e) => e.stopPropagation()}
+        maxLength={100}
+        aria-label="Rename"
+      />
+    )
+  }
+  return (
+    <span className={`tree-item-label ${className || ''}`} onDoubleClick={start} title="Double-click to rename">
+      {value}
+    </span>
+  )
+}
+
 // ── Folder node ───────────────────────────────────────────────
-function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, onDeleteFolder, onDeleteRequest }) {
+function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, onDeleteFolder, onDeleteRequest, onRenameFolder }) {
   const [open, setOpen] = useState(false)
   const { requests, loadRequestsForFolder } = useWorkspace()
   const key = `fold_${folder.id}`
@@ -95,14 +139,13 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
 
   return (
     <div>
-      <div
-        className="tree-item"
-        onClick={toggle}
-        title={folder.name}
-      >
+      <div className="tree-item" onClick={toggle} title={folder.name}>
         <ChevronIcon open={open} />
         <span className="tree-item-icon"><FolderIcon open={open} /></span>
-        <span className="tree-item-label">{folder.name}</span>
+        <InlineEdit
+          value={folder.name}
+          onSave={(name) => onRenameFolder(folder, name)}
+        />
         <div className="tree-item-actions">
           <button
             className="tree-item-action-btn danger"
@@ -118,10 +161,10 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
       {open && (
         <div className="tree-children">
           {!folderRequests && (
-            <div style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--text-subtle)' }}>Loading…</div>
+            <div className="tree-hint">Loading…</div>
           )}
           {folderRequests?.length === 0 && (
-            <div style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--text-subtle)' }}>No requests</div>
+            <div className="tree-hint">No requests — save one from the builder</div>
           )}
           {folderRequests?.map((req) => (
             <RequestItem
@@ -139,7 +182,7 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
 }
 
 // ── Collection node ───────────────────────────────────────────
-function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection }) {
+function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection }) {
   const [open, setOpen] = useState(false)
   const [showAddFolder, setShowAddFolder] = useState(false)
   const [folderName, setFolderName] = useState('')
@@ -181,7 +224,7 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
   }
 
   const handleDeleteFolder = async (folder) => {
-    if (!window.confirm(`Delete folder "${folder.name}"?`)) return
+    if (!window.confirm(`Delete folder "${folder.name}" and its requests?`)) return
     try {
       await removeFolder(collection.id, folder.id)
     } catch {
@@ -189,8 +232,18 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
     }
   }
 
+  const handleRenameFolder = async (folder, newName) => {
+    try {
+      await updateFolderApi(folder.id, { name: newName, description: folder.description })
+      // update in-place in folders state via context reload
+      loadFolders(collection.id)
+    } catch {
+      alert('Failed to rename folder')
+    }
+  }
+
   const handleDeleteRequest = async (request, colId, folderId) => {
-    if (!window.confirm(`Delete request "${request.name || request.url}"?`)) return
+    if (!window.confirm(`Delete "${request.name || request.url}"?`)) return
     try {
       await deleteRequestApi(request.id)
       removeRequestFromStore(colId, folderId, request.id)
@@ -201,16 +254,15 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
 
   return (
     <div style={{ marginBottom: '2px' }}>
-      <div
-        className="tree-item"
-        onClick={toggle}
-        title={collection.name}
-      >
+      <div className="tree-item" onClick={toggle} title={collection.name}>
         <ChevronIcon open={open} />
         <span className="tree-item-icon" style={{ color: 'var(--orange)' }}>
           <CollectionIcon />
         </span>
-        <span className="tree-item-label">{collection.name}</span>
+        <InlineEdit
+          value={collection.name}
+          onSave={(name) => onRenameCollection(collection, name)}
+        />
         <div className="tree-item-actions">
           <button
             className="tree-item-action-btn"
@@ -233,8 +285,7 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
 
       {open && (
         <div className="tree-children">
-          {/* Folders */}
-          {!colFolders && <div style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--text-subtle)' }}>Loading…</div>}
+          {!colFolders && <div className="tree-hint">Loading…</div>}
           {colFolders?.map((folder) => (
             <FolderNode
               key={folder.id}
@@ -243,11 +294,11 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
               activeRequestId={activeRequestId}
               onSelectRequest={onSelectRequest}
               onDeleteFolder={handleDeleteFolder}
+              onRenameFolder={handleRenameFolder}
               onDeleteRequest={handleDeleteRequest}
             />
           ))}
 
-          {/* Direct requests under collection */}
           {colRequests?.map((req) => (
             <RequestItem
               key={req.id}
@@ -258,7 +309,6 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
             />
           ))}
 
-          {/* Inline add folder form */}
           {showAddFolder && (
             <form onSubmit={handleAddFolder} style={{ display: 'flex', gap: '6px', padding: '6px 4px' }}>
               <input
@@ -269,20 +319,13 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
                 onChange={(e) => setFolderName(e.target.value)}
                 autoFocus
               />
-              <button
-                type="submit"
-                className="btn-sm btn-sm-primary"
-                style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}
-                disabled={saving}
-              >
+              <button type="submit" className="btn-sm btn-sm-primary"
+                style={{ height: '30px', padding: '0 10px', fontSize: '12px' }} disabled={saving}>
                 Add
               </button>
-              <button
-                type="button"
-                className="btn-sm btn-sm-ghost"
+              <button type="button" className="btn-sm btn-sm-ghost"
                 style={{ height: '30px', padding: '0 8px', fontSize: '12px' }}
-                onClick={() => { setShowAddFolder(false); setFolderName('') }}
-              >
+                onClick={() => { setShowAddFolder(false); setFolderName('') }}>
                 ✕
               </button>
             </form>
@@ -323,11 +366,21 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
   }
 
   const handleDeleteCollection = async (collection) => {
-    if (!window.confirm(`Delete collection "${collection.name}" and all its contents?`)) return
+    if (!window.confirm(`Delete "${collection.name}" and all its folders and requests? This cannot be undone.`)) return
     try {
       await removeCollection(collection.id)
     } catch {
       alert('Failed to delete collection')
+    }
+  }
+
+  const handleRenameCollection = async (collection, newName) => {
+    try {
+      await updateCollectionApi(collection.id, { name: newName, description: collection.description })
+      // Reload to get updated data
+      loadCollections()
+    } catch {
+      alert('Failed to rename collection')
     }
   }
 
@@ -360,8 +413,8 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
             <div style={{ padding: '8px', fontSize: '12px', color: 'var(--error)' }}>{error}</div>
           )}
           {!loading && !error && collections.length === 0 && (
-            <div style={{ padding: '12px 8px', fontSize: '12px', color: 'var(--text-subtle)', lineHeight: 1.6 }}>
-              No collections yet. Click + to create one.
+            <div style={{ padding: '12px 8px 4px', fontSize: '12px', color: 'var(--text-subtle)', lineHeight: 1.6 }}>
+              No collections yet. Hit <strong style={{ color: 'var(--text-muted)' }}>+</strong> to create your first one.
             </div>
           )}
 
@@ -372,6 +425,7 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
               activeRequestId={activeRequestId}
               onSelectRequest={onSelectRequest}
               onDeleteCollection={handleDeleteCollection}
+              onRenameCollection={handleRenameCollection}
             />
           ))}
         </div>

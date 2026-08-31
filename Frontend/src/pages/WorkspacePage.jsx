@@ -315,9 +315,21 @@ export default function WorkspacePage() {
   return (
     <WorkspaceProvider workspaceId={id}>
       <div className="app-shell" style={{ flexDirection: 'column' }}>
-        {/* Topbar */}
+        {/* Topbar — title is editable; saves via PUT /api/workspaces/:id */}
         <Topbar
           title={workspace?.name}
+          onTitleSave={async (newName) => {
+            try {
+              const res = await updateWorkspaceApi(workspace.id, {
+                name: newName,
+                description: workspace.description || undefined,
+                visibility: workspace.visibility,
+              })
+              setWorkspace(res.data)
+            } catch {
+              // revert handled by Topbar resetting to prop value
+            }
+          }}
           onMenuToggle={() => setSidebar((c) => !c)}
         />
 
