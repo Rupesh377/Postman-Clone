@@ -14,7 +14,6 @@
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Security/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Security/SecurityConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/AuthService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/ForgetPasswordService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Authentication/Service/ForgetPasswordService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Request/ApiRequestService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Backend/src/main/java/com/rupesh/Postman/Clone/Request/ApiRequestService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
