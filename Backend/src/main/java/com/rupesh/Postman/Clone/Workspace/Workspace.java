@@ -18,6 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @Getter
 @Setter
+@Table(name = "workspace", uniqueConstraints = {@UniqueConstraint(columnNames = {"owner_id", "name"})})
 public class Workspace {
 
     @Id
@@ -41,7 +42,7 @@ public class Workspace {
     @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkspaceMember> members = new ArrayList<>();
 
-    @OneToMany(mappedBy = "workspace")
+    @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Collection> collections;
 
     @Column(nullable = false, updatable = false)
