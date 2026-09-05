@@ -387,7 +387,7 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
   return (
     <aside className={`sidebar${collapsed ? ' collapsed' : ''}`}>
       <div className="sidebar-header">
-        <div style={{ padding: '4px 4px 8px', fontSize: '12px', color: 'var(--text-subtle)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+        <div className="sidebar-workspace-name-label">
           {workspace?.name || 'Workspace'}
         </div>
       </div>
