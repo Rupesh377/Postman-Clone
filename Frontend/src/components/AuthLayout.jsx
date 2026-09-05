@@ -12,7 +12,7 @@ const AppLogo = () => (
 export default function AuthLayout({ children, title, subtitle }) {
   return (
     <div className="auth-root">
-      {/* Left decorative panel */}
+      {/* Left panel */}
       <div className="auth-left">
         <div className="auth-left-content">
           <div className="auth-brand">
@@ -23,28 +23,27 @@ export default function AuthLayout({ children, title, subtitle }) {
             Build. Test.<br />Ship APIs faster.
           </h1>
           <p className="auth-desc">
-            Design, test, and collaborate on your APIs with ease.
-            Trusted by developers around the world.
+            A personal API testing workspace. Build and save requests,
+            organise them into collections, and iterate fast.
           </p>
-          <div className="auth-stats">
-            <div className="auth-stat">
-              <span className="auth-stat-num">10M+</span>
-              <span className="auth-stat-label">API Calls/day</span>
+          <div className="auth-features">
+            <div className="auth-feature">
+              <span className="auth-feature-dot" />
+              Collections &amp; folders to organise your requests
             </div>
-            <div className="auth-stat">
-              <span className="auth-stat-num">50K+</span>
-              <span className="auth-stat-label">Developers</span>
+            <div className="auth-feature">
+              <span className="auth-feature-dot" />
+              Full HTTP method support with headers, params &amp; body
             </div>
-            <div className="auth-stat">
-              <span className="auth-stat-num">99.9%</span>
-              <span className="auth-stat-label">Uptime</span>
+            <div className="auth-feature">
+              <span className="auth-feature-dot" />
+              Share workspaces with your team
             </div>
           </div>
         </div>
         <div className="auth-left-illustration">
           <div className="illustration-circle c1" />
           <div className="illustration-circle c2" />
-          <div className="illustration-circle c3" />
         </div>
       </div>
 

@@ -1,18 +1,20 @@
-/* ── OAuth divider ── */
+/* oauthButtons.css */
+
 .oauth-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
+/* Divider — thinner text, less prominent */
 .oauth-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   color: var(--text-subtle);
-  font-size: 12px;
+  font-size: 11px;
+  letter-spacing: 0.3px;
 }
-
 .oauth-divider::before,
 .oauth-divider::after {
   content: '';
@@ -21,35 +23,38 @@
   background: var(--border);
 }
 
-/* ── OAuth buttons row ── */
+/* OAuth button pair */
 .oauth-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .oauth-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 40px;
+  gap: 7px;
+  height: 38px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--border-mid);
   background: var(--bg-input);
-  color: var(--text-primary);
-  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+  color: var(--text-secondary);
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition);
   text-decoration: none;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.1px;
 }
-
 .oauth-btn:hover {
-  background: #333;
-  border-color: #444;
-  transform: translateY(-1px);
+  background: var(--bg-card);
+  border-color: var(--border-mid);
+  color: var(--text-primary);
 }
-
 .oauth-btn:active {
-  transform: translateY(0);
+  background: var(--bg-input);
 }

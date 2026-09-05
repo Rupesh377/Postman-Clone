@@ -25,19 +25,19 @@ export default function OAuthSuccessPage() {
       alignItems: 'center',
       justifyContent: 'center',
       height: '100vh',
-      background: '#1a1a2e',
-      color: '#fff',
+      background: 'var(--bg-dark)',
+      color: 'var(--text-primary)',
       flexDirection: 'column',
-      gap: '16px'
+      gap: '12px'
     }}>
       <div style={{
-        width: '40px', height: '40px',
-        border: '3px solid #FF6C37',
-        borderTopColor: 'transparent',
+        width: '28px', height: '28px',
+        border: '2.5px solid rgba(249,115,22,0.2)',
+        borderTopColor: 'var(--orange)',
         borderRadius: '50%',
-        animation: 'spin 0.8s linear infinite'
+        animation: 'spin 0.7s linear infinite'
       }} />
-      <p style={{ color: '#aaa', fontSize: '14px' }}>Completing sign in...</p>
+      <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Signing you in…</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
