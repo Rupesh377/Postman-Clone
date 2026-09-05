@@ -10,3 +10,4 @@ public class PostmanCloneApplication {
 		SpringApplication.run(PostmanCloneApplication.class, args);
 	}
 }
+
