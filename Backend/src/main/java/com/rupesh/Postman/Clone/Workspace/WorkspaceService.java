@@ -38,7 +38,7 @@ public class WorkspaceService {
         User owner = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (workspaceRepository.existsByName(request.getName())) {
+        if (workspaceRepository.existsByOwnerAndName(owner ,request.getName())) {
             throw new DuplicateResourceException("Workspace with same name already exists. Try with a new name.");
         }
 
@@ -50,6 +50,7 @@ public class WorkspaceService {
         ownerMember.setUser(owner);
         ownerMember.setRole(WorkspaceRole.OWNER);
         workspace.getMembers().add(ownerMember);
+
         Workspace savedWorkspace = workspaceRepository.save(workspace);
         return Mapper.toDTO(savedWorkspace);
     }
@@ -91,6 +92,7 @@ public class WorkspaceService {
         return Mapper.toDTO(workspace);
     }
 
+    @Transactional
     public void deleteWorkspace(Long workspaceId, Authentication authentication) {
         Workspace workspace = getOwnedWorkspace(workspaceId, authentication);
         workspaceRepository.delete(workspace);
