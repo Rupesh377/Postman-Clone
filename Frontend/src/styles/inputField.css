@@ -1,5 +1,3 @@
-/* inputField.css */
-
 .input-wrapper {
   display: flex;
   flex-direction: column;
@@ -32,7 +30,7 @@
   border-color: var(--error);
 }
 .input-container.input-error:focus-within {
-  box-shadow: 0 0 0 3px rgba(240,68,68,0.1);
+  box-shadow: 0 0 0 3px rgba(240,75,71,0.1);
 }
 
 .input-field {
@@ -50,7 +48,6 @@
 }
 .input-field::placeholder { color: var(--text-subtle); }
 
-/* Eye toggle */
 .input-eye-btn {
   background: none;
   border: none;
@@ -58,12 +55,11 @@
   color: var(--text-subtle);
   display: flex;
   align-items: center;
-  transition: color var(--transition);
+  transition: color 0.18s ease;
   height: 100%;
 }
 .input-eye-btn:hover { color: var(--text-muted); }
 
-/* Error message */
 .input-error-msg {
   font-size: 11.5px;
   color: var(--error);

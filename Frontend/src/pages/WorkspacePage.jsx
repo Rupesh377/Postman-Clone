@@ -17,7 +17,6 @@ import '../styles/app.css'
 
 const ROLES = ['ADMIN', 'EDITOR', 'VIEWER']
 
-// ── Members panel ─────────────────────────────────────────────
 function MembersPanel({ workspaceId, onClose }) {
   const [members, setMembers]       = useState([])
   const [loading, setLoading]       = useState(true)
@@ -163,7 +162,6 @@ function MembersPanel({ workspaceId, onClose }) {
   )
 }
 
-// ── Edit workspace modal ──────────────────────────────────────
 function EditWorkspaceModal({ workspace, onClose, onSaved }) {
   const [form, setForm]   = useState({ name: workspace.name, description: workspace.description || '', visibility: workspace.visibility })
   const [saving, setSaving] = useState(false)
@@ -225,7 +223,6 @@ function EditWorkspaceModal({ workspace, onClose, onSaved }) {
   )
 }
 
-// ── Empty state (no request selected) ────────────────────────
 function NoRequestSelected({ onNew }) {
   return (
     <div className="empty-state" style={{ flex: 1, justifyContent: 'center' }}>
@@ -249,7 +246,6 @@ function NoRequestSelected({ onNew }) {
   )
 }
 
-// ── Workspace page shell ──────────────────────────────────────
 export default function WorkspacePage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -327,7 +323,6 @@ export default function WorkspacePage() {
               })
               setWorkspace(res.data)
             } catch {
-              // revert handled by Topbar resetting to prop value
             }
           }}
           onMenuToggle={() => setSidebar((c) => !c)}

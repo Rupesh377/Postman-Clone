@@ -5,7 +5,6 @@ import '../styles/app.css'
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
-// ── Key-value pair helpers ────────────────────────────────────
 const parseKV = (raw) => {
   if (!raw) return [{ key: '', value: '', enabled: true }]
   const lines = raw.split('\n').filter(Boolean)
@@ -42,11 +41,9 @@ const serializeQueryParams = (pairs) =>
     .map((p) => `${encodeURIComponent(p.key.trim())}=${encodeURIComponent(p.value.trim())}`)
     .join('&')
 
-// ── Key-value table ───────────────────────────────────────────
 function KVTable({ pairs, onChange, keyPlaceholder = 'Key', valuePlaceholder = 'Value' }) {
   const update = (idx, field, val) => {
     const next = pairs.map((p, i) => (i === idx ? { ...p, [field]: val } : p))
-    // auto-add blank row if editing the last row
     if (idx === pairs.length - 1 && (field === 'key' || field === 'value') && val) {
       next.push({ key: '', value: '', enabled: true })
     }
@@ -113,7 +110,6 @@ function KVTable({ pairs, onChange, keyPlaceholder = 'Key', valuePlaceholder = '
   )
 }
 
-// ── Status color helper ───────────────────────────────────────
 function statusClass(code) {
   if (!code) return ''
   if (code < 300) return 'status-ok'
@@ -134,11 +130,9 @@ function tryFormatJSON(text) {
   }
 }
 
-// ── Main component ────────────────────────────────────────────
 export default function RequestBuilder({ request, collectionId, onSaved, onNew }) {
   const { addRequestToStore, updateRequestInStore } = useWorkspace()
 
-  // Form state
   const [name, setName] = useState('')
   const [method, setMethod] = useState('GET')
   const [url, setUrl] = useState('')
@@ -147,20 +141,17 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
   const [headers, setHeaders] = useState([{ key: '', value: '', enabled: true }])
   const [body, setBody] = useState('')
 
-  // Response state
-  const [response, setResponse] = useState(null) // { status, statusText, time, size, body, headers }
+  const [response, setResponse] = useState(null)
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState(null)
   const [activeRespTab, setActiveRespTab] = useState('body')
 
-  // Save state
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [saved, setSaved] = useState(false)
 
   const isEditing = Boolean(request?.id)
 
-  // Populate fields when a saved request is selected
   useEffect(() => {
     if (request) {
       setName(request.name || '')
@@ -173,7 +164,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
       setSendError(null)
       setSaveError(null)
     } else {
-      // New request
       setName('')
       setMethod('GET')
       setUrl('')
@@ -184,7 +174,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
     }
   }, [request])
 
-  // Build URL with query params merged
   const buildUrl = useCallback(() => {
     const qs = serializeQueryParams(params)
     if (!qs) return url
@@ -284,7 +273,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
 
   return (
     <div className="request-builder">
-      {/* Request name row */}
       <div className="request-name-row">
         <input
           className="request-name-input"
@@ -315,7 +303,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
         </div>
       )}
 
-      {/* URL bar */}
       <div className="request-url-bar">
         <select
           className="method-select"
@@ -355,7 +342,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
         </button>
       </div>
 
-      {/* Request tabs */}
       <div className="tabs" role="tablist">
         {[
           { id: 'params',  label: 'Params',  count: paramCount },
@@ -375,7 +361,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
         ))}
       </div>
 
-      {/* Tab content */}
       <div className="tab-content">
         {activeTab === 'params' && (
           <KVTable
@@ -410,9 +395,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
         )}
       </div>
 
-      {/* Response panel */}
       <div className="response-panel">
-        {/* Status bar */}
         <div className="response-header">
           <div className="tabs" style={{ flex: 1, border: 'none', padding: 0, background: 'transparent' }} role="tablist">
             <button
@@ -461,7 +444,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
           )}
         </div>
 
-        {/* Response body */}
         {sendError && (
           <div className="response-body" style={{ color: 'var(--error)' }}>
             {sendError}

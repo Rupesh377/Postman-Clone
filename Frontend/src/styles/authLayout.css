@@ -3,10 +3,9 @@
   min-height: 100vh;
 }
 
-/* Left panel */
 .auth-left {
   flex: 1;
-  background: linear-gradient(150deg, #140800 0%, #1a0c00 50%, #0e0600 100%);
+  background: var(--bg-panel);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -52,7 +51,6 @@
   max-width: 320px;
 }
 
-/* Feature list — replaces fake statistics */
 .auth-features {
   display: flex;
   flex-direction: column;
@@ -77,7 +75,6 @@
   opacity: 0.7;
 }
 
-/* Two decorative circles — enough for visual depth */
 .auth-left-illustration {
   position: absolute;
   inset: 0;
@@ -95,7 +92,7 @@
   height: 480px;
   right: -200px;
   bottom: -120px;
-  border: 1px solid rgba(249,115,22,0.1);
+  border: 1px solid rgba(255,108,55,0.1);
   background: transparent;
 }
 
@@ -104,11 +101,11 @@
   height: 260px;
   left: -80px;
   top: -70px;
-  border: 1px solid rgba(249,115,22,0.07);
+  border: 1px solid rgba(255,108,55,0.07);
   background: transparent;
 }
 
-/* Right panel */
+/* right panel */
 .auth-right {
   width: 460px;
   flex-shrink: 0;
