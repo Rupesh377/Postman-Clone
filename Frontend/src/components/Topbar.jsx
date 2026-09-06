@@ -18,12 +18,10 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
   const menuRef  = useRef(null)
   const titleRef = useRef(null)
 
-  // keep editVal in sync if title prop changes (e.g. after save)
   useEffect(() => {
     if (!editing) setEditVal(title || '')
   }, [title, editing])
 
-  // close user-menu on outside click
   useEffect(() => {
     const handler = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
@@ -39,7 +37,7 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
   }
 
   const startEdit = () => {
-    if (!onTitleSave) return   // read-only if no save handler provided
+    if (!onTitleSave) return
     setEditVal(title || '')
     setEditing(true)
     setTimeout(() => titleRef.current?.select(), 0)
@@ -64,7 +62,6 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
   return (
     <>
       <header className="topbar">
-        {/* Hamburger — opens the global nav drawer */}
         <button
           className="btn-icon"
           onClick={() => setDrawerOpen(true)}

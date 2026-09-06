@@ -5,7 +5,6 @@ import { updateCollectionApi, updateFolderApi } from '../api/collectionApi'
 import Modal from './Modal'
 import '../styles/app.css'
 
-// ── Icons ────────────────────────────────────────────────────
 const FolderIcon = ({ open }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     {open
@@ -50,12 +49,10 @@ const TrashIcon = () => (
   </svg>
 )
 
-// ── Method badge ─────────────────────────────────────────────
 function MethodBadge({ method }) {
   return <span className={`method-badge method-${method}`}>{method}</span>
 }
 
-// ── Request item inside tree ──────────────────────────────────
 function RequestItem({ request, active, onSelect, onDelete }) {
   return (
     <div
@@ -79,7 +76,6 @@ function RequestItem({ request, active, onSelect, onDelete }) {
   )
 }
 
-// ── Inline editable label ─────────────────────────────────────
 function InlineEdit({ value, onSave, className }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal]         = useState(value)
@@ -122,7 +118,6 @@ function InlineEdit({ value, onSave, className }) {
   )
 }
 
-// ── Folder node ───────────────────────────────────────────────
 function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, onDeleteFolder, onDeleteRequest, onRenameFolder }) {
   const [open, setOpen] = useState(false)
   const { requests, loadRequestsForFolder } = useWorkspace()
@@ -181,7 +176,6 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
   )
 }
 
-// ── Collection node ───────────────────────────────────────────
 function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection }) {
   const [open, setOpen] = useState(false)
   const [showAddFolder, setShowAddFolder] = useState(false)
@@ -235,7 +229,6 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
   const handleRenameFolder = async (folder, newName) => {
     try {
       await updateFolderApi(folder.id, { name: newName, description: folder.description })
-      // update in-place in folders state via context reload
       loadFolders(collection.id)
     } catch {
       alert('Failed to rename folder')
@@ -336,7 +329,6 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
   )
 }
 
-// ── Main Sidebar ──────────────────────────────────────────────
 export default function Sidebar({ workspace, onSelectRequest, activeRequestId, collapsed }) {
   const [showAddCollection, setShowAddCollection] = useState(false)
   const [collectionName, setCollectionName] = useState('')
@@ -377,7 +369,6 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
   const handleRenameCollection = async (collection, newName) => {
     try {
       await updateCollectionApi(collection.id, { name: newName, description: collection.description })
-      // Reload to get updated data
       loadCollections()
     } catch {
       alert('Failed to rename collection')
@@ -431,7 +422,6 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
         </div>
       </nav>
 
-      {/* Add collection modal */}
       {showAddCollection && (
         <Modal title="New Collection" onClose={() => { setShowAddCollection(false); setCollectionName(''); setCollectionDesc('') }}>
           <form onSubmit={handleAddCollection}>

@@ -14,7 +14,6 @@ import '../styles/dashboard.css'
 
 const VISIBILITY_OPTIONS = ['PRIVATE', 'TEAM', 'PUBLIC']
 
-// ── Inline rename for workspace cards ─────────────────────────
 function InlineCardName({ value, onSave }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value)
@@ -93,13 +92,10 @@ export default function DashboardPage() {
     }
   }
 
-  // ── Navigate into workspace ─────────────────────────────────
-  // Explicitly use a named handler so we can confirm it's called.
   const openWorkspace = (id) => {
     navigate(`/workspace/${id}`)
   }
 
-  // ── Rename workspace ────────────────────────────────────────
   const handleRename = async (ws, newName) => {
     try {
       const res = await updateWorkspaceApi(ws.id, {
@@ -114,7 +110,6 @@ export default function DashboardPage() {
     }
   }
 
-  // ── Delete workspace ────────────────────────────────────────
   const handleDelete = async (e, ws) => {
     // Stop the click from bubbling up to the card and triggering navigation
     e.preventDefault()
@@ -144,7 +139,6 @@ export default function DashboardPage() {
     }
   }
 
-  // ── Create workspace ────────────────────────────────────────
   const handleFormChange = (e) => {
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }))
     setFormErr((p) => ({ ...p, [e.target.name]: '' }))
@@ -187,7 +181,6 @@ export default function DashboardPage() {
       <Topbar />
 
       <div className="dashboard-page">
-        {/* ── Header ── */}
         <div className="dash-header">
           <div>
             <h1 className="dash-title">
@@ -212,7 +205,6 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* ── Error banner ── */}
         {error && (
           <div className="alert alert-error" style={{ marginBottom: '24px' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -225,7 +217,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Loading skeleton ── */}
         {loading && (
           <div className="dash-grid">
             {[1, 2, 3].map((i) => (
@@ -234,7 +225,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Empty state ── */}
         {!loading && !error && workspaces.length === 0 && (
           <div className="dash-empty">
             <div className="dash-empty-icon">
@@ -253,7 +243,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Workspace grid ── */}
         {!loading && workspaces.length > 0 && (
           <div className="dash-grid">
             {workspaces.map((ws) => (
@@ -341,7 +330,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── Create workspace modal ── */}
       {showModal && (
         <Modal title="New workspace" onClose={closeModal}>
           <form onSubmit={handleCreate}>

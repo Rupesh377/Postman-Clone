@@ -1,6 +1,5 @@
-/* app.css — app shell styles */
+/* app shell */
 
-/* App shell */
 .app-shell {
   display: flex;
   height: 100vh;
@@ -8,7 +7,6 @@
   background: var(--bg-dark);
 }
 
-/* Topbar */
 .topbar {
   height: 44px;
   background: var(--bg-panel);
@@ -91,11 +89,10 @@
   margin-left: auto;
 }
 
-/* Avatar — square with rounded corners instead of circle */
 .topbar-avatar {
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-sm);  /* not a circle — square with small radius */
+  border-radius: var(--radius-sm);
   background: var(--orange);
   color: #fff;
   font-size: 11px;
@@ -114,11 +111,8 @@
   box-shadow: 0 0 0 3px var(--orange-faint);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SIDEBAR
-   Left border replaced with a 2px accent track.
-   Active items use a left stripe, not a filled background.
-   ═══════════════════════════════════════════════════════════ */
+/* sidebar */
+
 .sidebar {
   width: 248px;
   flex-shrink: 0;
@@ -151,7 +145,6 @@
   padding: 6px 0;
 }
 
-/* ── Tree ── */
 .tree-section { padding: 0 6px; }
 
 .tree-section-header {
@@ -189,7 +182,6 @@
   align-items: center;
   gap: 5px;
   padding: 5px 8px;
-  /* Left rail — thinner than before */
   border-left: 2px solid transparent;
   border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
   cursor: pointer;
@@ -203,7 +195,6 @@
   background: var(--bg-hover);
   color: var(--text-secondary);
 }
-/* Active: left stripe, not filled card */
 .tree-item.active {
   border-left-color: var(--orange);
   color: var(--text-primary);
@@ -264,12 +255,12 @@
   box-shadow: 0 0 0 2px var(--orange-faint);
 }
 
-/* ── Method badges — pill shape, slightly condensed ── */
+/* method badges */
 .method-badge {
   font-size: 9.5px;
   font-weight: 700;
   padding: 1px 6px;
-  border-radius: 20px;   /* pill, not square */
+  border-radius: 20px;
   flex-shrink: 0;
   letter-spacing: 0.3px;
   font-family: 'Space Grotesk', sans-serif;
@@ -282,9 +273,6 @@
 .method-HEAD   { background: rgba(20,184,166,0.12);  color: #13c4b2; border: 1px solid rgba(20,184,166,0.2); }
 .method-OPTIONS{ background: rgba(99,102,241,0.12);  color: #6366f1; border: 1px solid rgba(99,102,241,0.2); }
 
-/* ═══════════════════════════════════════════════════════════
-   MAIN CONTENT
-   ═══════════════════════════════════════════════════════════ */
 .main-content {
   flex: 1;
   display: flex;
@@ -293,11 +281,8 @@
   min-width: 0;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   REQUEST BUILDER
-   URL bar: method + URL are visually joined as one compound input.
-   Tabs: no bottom border on tab area, just the active underline.
-   ═══════════════════════════════════════════════════════════ */
+/* request builder */
+
 .request-builder {
   flex: 1;
   display: flex;
@@ -329,7 +314,6 @@
   font-weight: 400;
 }
 
-/* URL bar — compound input: method selector visually attached to url input */
 .request-url-bar {
   display: flex;
   align-items: center;
@@ -386,7 +370,7 @@
   background: var(--orange);
   color: #fff;
   border: none;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;  /* attached to url-input */
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   font-size: 12.5px;
   font-weight: 700;
   font-family: 'Space Grotesk', sans-serif;
@@ -398,13 +382,10 @@
   gap: 5px;
 }
 .send-btn:hover:not(:disabled) { background: var(--orange-dark); }
-.send-btn:active:not(:disabled) {
-  background: #d95e00;
-  transform: none;  /* no lift on active — feels more purposeful */
-}
+.send-btn:active:not(:disabled) { background: #d95e00; transform: none; }
 .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Request tabs */
+/* tabs */
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--border);
@@ -447,7 +428,7 @@
   padding: 14px 16px;
 }
 
-/* KV table */
+/* kv editor */
 .kv-table {
   width: 100%;
   border-collapse: collapse;
@@ -518,7 +499,7 @@
 }
 .body-editor:focus { border-color: var(--border-focus); }
 
-/* Response panel */
+/* response panel */
 .response-panel {
   border-top: 1px solid var(--border);
   background: var(--bg-dark);
@@ -584,9 +565,7 @@
   text-align: center;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   DASHBOARD
-   ═══════════════════════════════════════════════════════════ */
+/* dashboard (kept for backward compat, overridden by dashboard.css) */
 .dashboard-page {
   flex: 1;
   overflow-y: auto;
@@ -594,7 +573,6 @@
   background: var(--bg-dark);
 }
 
-/* These are kept for backward compat but overridden by dashboard.css */
 .dashboard-header { margin-bottom: 28px; }
 .dashboard-heading {
   font-size: 24px;
@@ -612,11 +590,10 @@
   gap: 14px;
 }
 
-/* Workspace card */
+/* workspace cards */
 .workspace-card {
   background: var(--bg-panel);
   border: 1px solid var(--border);
-  /* Non-uniform radius — top corners more rounded than bottom */
   border-radius: var(--radius-md) var(--radius-md) var(--radius-sm) var(--radius-sm);
   padding: 18px 20px 16px;
   cursor: pointer;
@@ -639,7 +616,6 @@
 .workspace-card-icon {
   width: 32px;
   height: 32px;
-  /* Rectangle, not square with circle — more distinctive */
   border-radius: var(--radius-xs);
   background: var(--orange-faint);
   border: 1px solid rgba(249,115,22,0.15);
@@ -675,7 +651,6 @@
   align-items: center;
 }
 
-/* Visibility badges — reduced to a dot + text, less boxed */
 .visibility-badge {
   font-size: 10.5px;
   font-weight: 600;
@@ -687,7 +662,6 @@
 .visibility-TEAM    { background: rgba(52,199,89,0.1);   color: #34c759; }
 .visibility-PUBLIC  { background: var(--orange-faint);    color: var(--orange); }
 
-/* New workspace card */
 .workspace-card-new {
   border-style: dashed;
   border-color: var(--border);
@@ -720,11 +694,7 @@
   color: var(--text-muted);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MODAL
-   Slightly asymmetric padding (more top than bottom),
-   shadow with warm tint.
-   ═══════════════════════════════════════════════════════════ */
+/* modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -743,7 +713,7 @@
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 448px;
-  padding: 28px 28px 24px;  /* more top than bottom */
+  padding: 28px 28px 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -796,9 +766,7 @@
   margin-top: 2px;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FORM FIELDS
-   ═══════════════════════════════════════════════════════════ */
+/* form fields */
 .field { display: flex; flex-direction: column; gap: 5px; }
 
 .field-label {
@@ -843,9 +811,7 @@
 .field-error { font-size: 11.5px; color: var(--error); }
 .input-error { border-color: var(--error) !important; }
 
-/* ═══════════════════════════════════════════════════════════
-   BUTTONS
-   ═══════════════════════════════════════════════════════════ */
+/* buttons */
 .btn-icon {
   background: none;
   border: none;
@@ -901,11 +867,7 @@
 }
 .btn-sm-danger:hover { background: rgba(240,68,68,0.18); }
 
-/* ═══════════════════════════════════════════════════════════
-   SETTINGS PAGE
-   Two-column layout on desktop — name/actions on left, form on right.
-   Breaks the stacked-identical-cards AI pattern.
-   ═══════════════════════════════════════════════════════════ */
+/* settings page */
 .settings-page {
   flex: 1;
   overflow-y: auto;
@@ -961,9 +923,7 @@
 .settings-row-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
 .settings-row-value { font-size: 13px; color: var(--text-muted); }
 
-/* ═══════════════════════════════════════════════════════════
-   ALERTS
-   ═══════════════════════════════════════════════════════════ */
+/* alerts */
 .alert {
   display: flex;
   align-items: center;
@@ -985,11 +945,7 @@
   color: #4ade80;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   EMPTY STATE
-   No centered-circle-icon pattern. Left-aligned with a
-   horizontal rule above, like a proper empty list.
-   ═══════════════════════════════════════════════════════════ */
+/* empty state */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1014,9 +970,7 @@
 .empty-state-title { font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.2px; }
 .empty-state-desc { font-size: 12.5px; color: var(--text-muted); max-width: 260px; line-height: 1.6; }
 
-/* ═══════════════════════════════════════════════════════════
-   DROPDOWN
-   ═══════════════════════════════════════════════════════════ */
+/* dropdown */
 .dropdown { position: relative; }
 
 .dropdown-menu {
@@ -1065,9 +1019,7 @@
   margin: 4px 0;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LOADERS
-   ═══════════════════════════════════════════════════════════ */
+/* loaders */
 .page-loader {
   display: flex;
   align-items: center;
@@ -1076,7 +1028,6 @@
   flex: 1;
 }
 
-/* Spinner — rectangular notch instead of simple circle */
 .spinner-lg {
   width: 28px;
   height: 28px;
@@ -1087,9 +1038,7 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ═══════════════════════════════════════════════════════════
-   MEMBERS
-   ═══════════════════════════════════════════════════════════ */
+/* members */
 .members-list { display: flex; flex-direction: column; gap: 1px; }
 
 .member-row {
@@ -1105,7 +1054,7 @@
 .member-avatar {
   width: 30px;
   height: 30px;
-  border-radius: var(--radius-sm);  /* square avatar, not circle */
+  border-radius: var(--radius-sm);
   background: var(--orange);
   color: #fff;
   font-size: 11px;
@@ -1134,14 +1083,9 @@
 .role-EDITOR { background: rgba(52,199,89,0.1);         color: #34c759; }
 .role-VIEWER { background: rgba(148,163,184,0.08);      color: #94a3b8; }
 
-/* ═══════════════════════════════════════════════════════════
-   SIDEBAR BACKDROP (mobile)
-   ═══════════════════════════════════════════════════════════ */
 .sidebar-backdrop { display: none; }
 
-/* ═══════════════════════════════════════════════════════════
-   RESPONSIVE
-   ═══════════════════════════════════════════════════════════ */
+/* responsive */
 @media (max-width: 900px) {
   .sidebar {
     position: absolute;
@@ -1177,4 +1121,3 @@
   .topbar { border-bottom: 1px solid var(--border); }
   .dashboard-page { padding: 16px; }
 }
-

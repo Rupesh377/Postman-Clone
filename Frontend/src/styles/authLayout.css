@@ -3,7 +3,6 @@
   min-height: 100vh;
 }
 
-/* Left panel */
 .auth-left {
   flex: 1;
   background: linear-gradient(150deg, #140800 0%, #1a0c00 50%, #0e0600 100%);
@@ -52,7 +51,6 @@
   max-width: 320px;
 }
 
-/* Feature list — replaces fake statistics */
 .auth-features {
   display: flex;
   flex-direction: column;
@@ -77,7 +75,6 @@
   opacity: 0.7;
 }
 
-/* Two decorative circles — enough for visual depth */
 .auth-left-illustration {
   position: absolute;
   inset: 0;
@@ -108,7 +105,7 @@
   background: transparent;
 }
 
-/* Right panel */
+/* right panel */
 .auth-right {
   width: 460px;
   flex-shrink: 0;

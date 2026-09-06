@@ -93,7 +93,6 @@ export default function SettingsPage() {
 
       <div className="settings-page" style={{ margin: '0 auto', width: '100%' }}>
 
-        {/* ── Profile ── */}
         <section className="settings-section">
           <div className="settings-section-meta">
             <h2 className="settings-section-title">Profile</h2>
@@ -160,7 +159,6 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* ── Change Password ── */}
         <section className="settings-section">
           <div className="settings-section-meta">
             <h2 className="settings-section-title">Password</h2>
@@ -200,7 +198,6 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* ── Account ── */}
         <section className="settings-section">
           <div className="settings-section-meta">
             <h2 className="settings-section-title">Account</h2>

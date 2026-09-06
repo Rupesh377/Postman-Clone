@@ -5,7 +5,6 @@ import { getCollectionsApi } from '../api/collectionApi'
 import AppLogo from './AppLogo'
 import '../styles/navDrawer.css'
 
-// ── tiny icons ────────────────────────────────────────────────
 const WorkspaceIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -28,7 +27,6 @@ const SearchIcon = () => (
   </svg>
 )
 
-// ── Single workspace row with lazy-loaded collections ─────────
 function WorkspaceRow({ ws, isActive, onNavigate }) {
   const [open, setOpen] = useState(isActive)
   const [collections, setCollections] = useState(null)
@@ -98,7 +96,6 @@ function WorkspaceRow({ ws, isActive, onNavigate }) {
   )
 }
 
-// ── Main drawer ───────────────────────────────────────────────
 export default function NavDrawer({ open, onClose }) {
   const navigate = useNavigate()
   const { id: activeId } = useParams()
@@ -108,7 +105,6 @@ export default function NavDrawer({ open, onClose }) {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Load workspaces when drawer opens
   useEffect(() => {
     if (open && workspaces === null) {
       setLoading(true)
@@ -119,14 +115,12 @@ export default function NavDrawer({ open, onClose }) {
     }
   }, [open])
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
-  // Focus trap / close on outside click
   useEffect(() => {
     const handler = (e) => {
       if (open && drawerRef.current && !drawerRef.current.contains(e.target)) {
@@ -150,21 +144,18 @@ export default function NavDrawer({ open, onClose }) {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className={`nd-backdrop ${open ? 'nd-backdrop--visible' : ''}`}
         aria-hidden="true"
         onClick={onClose}
       />
 
-      {/* Drawer panel */}
       <aside
         ref={drawerRef}
         className={`nd-drawer ${open ? 'nd-drawer--open' : ''}`}
         aria-label="Navigation"
         role="navigation"
       >
-        {/* Header */}
         <div className="nd-header">
           <AppLogo size={24} />
           <span className="nd-header-title">APIForge</span>
@@ -175,7 +166,6 @@ export default function NavDrawer({ open, onClose }) {
           </button>
         </div>
 
-        {/* Search */}
         <div className="nd-search-wrap">
           <SearchIcon />
           <input
@@ -187,10 +177,8 @@ export default function NavDrawer({ open, onClose }) {
           />
         </div>
 
-        {/* Section label */}
         <div className="nd-section-label">Your Workspaces</div>
 
-        {/* Content */}
         <div className="nd-list">
           {loading && (
             <div className="nd-loading">
@@ -215,7 +203,6 @@ export default function NavDrawer({ open, onClose }) {
           ))}
         </div>
 
-        {/* Footer */}
         <div className="nd-footer">
           <button
             className="nd-footer-btn"

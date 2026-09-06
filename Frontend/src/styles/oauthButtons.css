@@ -1,12 +1,9 @@
-/* oauthButtons.css */
-
 .oauth-wrapper {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Divider — thinner text, less prominent */
 .oauth-divider {
   display: flex;
   align-items: center;
@@ -23,7 +20,6 @@
   background: var(--border);
 }
 
-/* OAuth button pair */
 .oauth-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
