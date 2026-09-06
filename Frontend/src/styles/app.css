@@ -871,8 +871,8 @@
 .settings-page {
   flex: 1;
   overflow-y: auto;
-  padding: 32px 36px;
-  max-width: 780px;
+  padding: 32px 48px;
+  max-width: 860px;
 }
 
 .settings-section {

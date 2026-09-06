@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { SettingsProvider } from './context/SettingsContext'
+import SettingsDrawer from './components/SettingsDrawer'
 import ProtectedRoute from './components/ProtectedRoute'
 
 // Auth pages (already built)
@@ -18,7 +20,9 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
+        <SettingsProvider>
+          <SettingsDrawer />
+          <Routes>
           {/* Public routes */}
           <Route path="/"                element={<Navigate to="/login" replace />} />
           <Route path="/login"           element={<LoginPage />} />
@@ -41,6 +45,7 @@ function App() {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        </SettingsProvider>
       </BrowserRouter>
     </AuthProvider>
   )
