@@ -15,9 +15,9 @@
   line-height: 1.4;
 }
 .alert-error {
-  background: rgba(240,68,68,0.07);
-  border: 1px solid rgba(240,68,68,0.2);
-  color: #f07070;
+  background: rgba(240,75,71,0.07);
+  border: 1px solid rgba(240,75,71,0.2);
+  color: var(--error);
 }
 
 .btn {
@@ -34,12 +34,12 @@
   transition: background var(--transition), transform 0.1s ease;
 }
 .btn-primary {
-  background: var(--orange);
+  background: var(--accent-blue);
   color: #fff;
   width: 100%;
 }
-.btn-primary:hover:not(:disabled) { background: var(--orange-dark); }
-.btn-primary:active:not(:disabled) { background: #d95e00; transform: none; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-blue-dark); }
+.btn-primary:active:not(:disabled) { background: var(--accent-blue-dark); transform: none; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-secondary {
@@ -123,12 +123,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(249,115,22,0.18);
+  border: 1px solid rgba(255,108,55,0.18);
   margin-bottom: 4px;
 }
 .error-icon {
-  background: rgba(240,68,68,0.07);
-  border-color: rgba(240,68,68,0.18);
+  background: rgba(240,75,71,0.07);
+  border-color: rgba(240,75,71,0.18);
 }
 .success-text {
   font-size: 13.5px;

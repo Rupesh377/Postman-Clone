@@ -30,7 +30,7 @@
   border-color: var(--error);
 }
 .input-container.input-error:focus-within {
-  box-shadow: 0 0 0 3px rgba(240,68,68,0.1);
+  box-shadow: 0 0 0 3px rgba(240,75,71,0.1);
 }
 
 .input-field {
