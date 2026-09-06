@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useSettings } from '../context/SettingsContext'
 import AppLogo from './AppLogo'
 import NavDrawer from './NavDrawer'
 import { logoutApi } from '../api/authApi'
@@ -8,6 +9,7 @@ import '../styles/app.css'
 
 export default function Topbar({ title, onTitleSave, onMenuToggle }) {
   const { user, accessToken, logout } = useAuth()
+  const { openSettings } = useSettings()
   const navigate = useNavigate()
 
   const [menuOpen, setMenuOpen]     = useState(false)
@@ -132,13 +134,13 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{user?.email || ''}</div>
                 </div>
 
-                <Link to="/settings" className="dropdown-item" role="menuitem" onClick={() => setMenuOpen(false)}>
+                <button className="dropdown-item" role="menuitem" onClick={() => { setMenuOpen(false); openSettings() }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
                   </svg>
                   Settings
-                </Link>
+                </button>
 
                 <Link to="/dashboard" className="dropdown-item" role="menuitem" onClick={() => setMenuOpen(false)}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

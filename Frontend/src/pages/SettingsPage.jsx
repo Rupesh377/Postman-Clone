@@ -91,7 +91,7 @@ export default function SettingsPage() {
     <div className="app-shell" style={{ flexDirection: 'column' }}>
       <Topbar title="Settings" />
 
-      <div className="settings-page" style={{ margin: '0 auto', width: '100%' }}>
+      <div className="settings-page">
 
         <section className="settings-section">
           <div className="settings-section-meta">
