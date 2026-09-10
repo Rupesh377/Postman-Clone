@@ -1,6 +1,7 @@
 package com.rupesh.Postman.Clone.Collection;
 
 import com.rupesh.Postman.Clone.Folder.Folder;
+import com.rupesh.Postman.Clone.APIRequest.ApiRequest;
 import com.rupesh.Postman.Clone.Workspace.Workspace;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -33,4 +34,7 @@ public class Collection {
 
     @OneToMany(mappedBy = "collection", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Folder> folders = new ArrayList<>();
+
+    @OneToMany(mappedBy = "collection")
+    private List<ApiRequest> apiRequests;
 }

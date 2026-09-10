@@ -1,11 +1,14 @@
 package com.rupesh.Postman.Clone.Folder;
 
 import com.rupesh.Postman.Clone.Collection.Collection;
+import com.rupesh.Postman.Clone.APIRequest.ApiRequest;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Entity
 @Getter
@@ -27,4 +30,7 @@ public class Folder {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "collection_id", nullable = false)
     private Collection collection;
+
+    @OneToMany(mappedBy = "folder")
+    private List<ApiRequest> apiRequests;
 }

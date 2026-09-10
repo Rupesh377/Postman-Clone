@@ -1,4 +1,4 @@
-package com.rupesh.Postman.Clone.Request;
+package com.rupesh.Postman.Clone.APIRequest;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
