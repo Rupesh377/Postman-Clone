@@ -1,4 +1,4 @@
-package com.rupesh.Postman.Clone.Request;
+package com.rupesh.Postman.Clone.APIRequest;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -1,4 +1,4 @@
-package com.rupesh.Postman.Clone.Request;
+package com.rupesh.Postman.Clone.APIRequest;
 
 import com.rupesh.Postman.Clone.Collection.Collection;
 import com.rupesh.Postman.Clone.Folder.Folder;
@@ -19,7 +19,6 @@ public class ApiRequest {
 
     @Column(nullable = false)
     private String name;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private HttpMethod method;

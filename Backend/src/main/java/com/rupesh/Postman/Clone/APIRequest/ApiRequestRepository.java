@@ -1,4 +1,4 @@
-package com.rupesh.Postman.Clone.Request;
+package com.rupesh.Postman.Clone.APIRequest;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
