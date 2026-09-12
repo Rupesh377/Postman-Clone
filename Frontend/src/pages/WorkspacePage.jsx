@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar'
 import RequestBuilder from '../components/RequestBuilder'
 import Modal from '../components/Modal'
 import { WorkspaceProvider } from '../context/WorkspaceContext'
+import { EnvironmentProvider } from '../context/EnvironmentContext'
 import {
   getWorkspaceApi,
   updateWorkspaceApi,
@@ -309,6 +310,7 @@ export default function WorkspacePage() {
   }
 
   return (
+    <EnvironmentProvider>
     <WorkspaceProvider workspaceId={id}>
       <div className="app-shell" style={{ flexDirection: 'column' }}>
         {/* Topbar — title is editable; saves via PUT /api/workspaces/:id */}
@@ -410,5 +412,6 @@ export default function WorkspacePage() {
         )}
       </div>
     </WorkspaceProvider>
+    </EnvironmentProvider>
   )
 }
