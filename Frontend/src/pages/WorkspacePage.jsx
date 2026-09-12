@@ -4,7 +4,7 @@ import Topbar from '../components/Topbar'
 import Sidebar from '../components/Sidebar'
 import RequestBuilder from '../components/RequestBuilder'
 import Modal from '../components/Modal'
-import { WorkspaceProvider } from '../context/WorkspaceContext'
+import { WorkspaceProvider, useWorkspace } from '../context/WorkspaceContext'
 import { EnvironmentProvider } from '../context/EnvironmentContext'
 import {
   getWorkspaceApi,
@@ -247,71 +247,33 @@ function NoRequestSelected({ onNew }) {
   )
 }
 
-export default function WorkspacePage() {
-  const { id } = useParams()
-  const navigate = useNavigate()
+// Inner component — must live inside WorkspaceProvider so useWorkspace() works.
+// Owns all the request/collection selection state so handleNewRequest can
+// default activeCollection to the first available collection.
+function WorkspaceContent({ workspace, onWorkspaceSaved }) {
+  const { collections } = useWorkspace()
 
-  const [workspace, setWorkspace]         = useState(null)
-  const [wsLoading, setWsLoading]         = useState(true)
-  const [wsError, setWsError]             = useState(null)
-  const [sidebarCollapsed, setSidebar]    = useState(false)
-  const [activeRequest, setActiveRequest] = useState(null)
+  const [sidebarCollapsed, setSidebar]          = useState(false)
+  const [activeRequest, setActiveRequest]       = useState(null)
   const [activeCollection, setActiveCollection] = useState(null)
-  const [showMembers, setShowMembers]     = useState(false)
-  const [showEdit, setShowEdit]           = useState(false)
+  const [showMembers, setShowMembers]           = useState(false)
+  const [showEdit, setShowEdit]                 = useState(false)
 
-  useEffect(() => {
-    setWsLoading(true)
-    setWsError(null)
-    getWorkspaceApi(id)
-      .then((r) => setWorkspace(r.data))
-      .catch((err) => {
-        if (err.response?.status === 403 || err.response?.status === 404) {
-          navigate('/dashboard')
-        } else {
-          setWsError(err.response?.data?.message || 'Failed to load workspace')
-        }
-      })
-      .finally(() => setWsLoading(false))
-  }, [id])
-
-  // When a request is selected from the sidebar, also track which collection it belongs to
+  // When a request is selected from the sidebar, track its collection too.
   const handleSelectRequest = (request) => {
     setActiveRequest(request)
     setActiveCollection(request.collectionId)
   }
 
+  // FIX: if no collection has been selected yet, default to the first available
+  // one so the RequestBuilder always renders and "Save to Collection" has a
+  // valid collectionId to post to.
   const handleNewRequest = () => {
     setActiveRequest(null)
-  }
-
-  if (wsLoading) {
-    return (
-      <div className="app-shell" style={{ flexDirection: 'column' }}>
-        <Topbar onMenuToggle={() => setSidebar((c) => !c)} />
-        <div className="page-loader"><div className="spinner-lg" /></div>
-      </div>
-    )
-  }
-
-  if (wsError) {
-    return (
-      <div className="app-shell" style={{ flexDirection: 'column' }}>
-        <Topbar onMenuToggle={() => setSidebar((c) => !c)} />
-        <div className="empty-state" style={{ flex: 1 }}>
-          <div className="empty-state-title">Something went wrong</div>
-          <div className="empty-state-desc">{wsError}</div>
-          <button className="btn-sm btn-sm-primary" onClick={() => navigate('/dashboard')}>
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    )
+    setActiveCollection((prev) => prev ?? collections[0]?.id ?? null)
   }
 
   return (
-    <EnvironmentProvider>
-    <WorkspaceProvider workspaceId={id}>
       <div className="app-shell" style={{ flexDirection: 'column' }}>
         {/* Topbar — title is editable; saves via PUT /api/workspaces/:id */}
         <Topbar
@@ -323,7 +285,7 @@ export default function WorkspacePage() {
                 description: workspace.description || undefined,
                 visibility: workspace.visibility,
               })
-              setWorkspace(res.data)
+              onWorkspaceSaved(res.data)
             } catch {
             }
           }}
@@ -401,16 +363,73 @@ export default function WorkspacePage() {
         </div>
 
         {showMembers && (
-          <MembersPanel workspaceId={id} onClose={() => setShowMembers(false)} />
+          <MembersPanel workspaceId={workspace.id} onClose={() => setShowMembers(false)} />
         )}
         {showEdit && (
           <EditWorkspaceModal
             workspace={workspace}
             onClose={() => setShowEdit(false)}
-            onSaved={(updated) => setWorkspace(updated)}
+            onSaved={onWorkspaceSaved}
           />
         )}
       </div>
+  )
+}
+
+export default function WorkspacePage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+
+  const [workspace, setWorkspace] = useState(null)
+  const [wsLoading, setWsLoading] = useState(true)
+  const [wsError, setWsError]     = useState(null)
+
+  useEffect(() => {
+    setWsLoading(true)
+    setWsError(null)
+    getWorkspaceApi(id)
+      .then((r) => setWorkspace(r.data))
+      .catch((err) => {
+        if (err.response?.status === 403 || err.response?.status === 404) {
+          navigate('/dashboard')
+        } else {
+          setWsError(err.response?.data?.message || 'Failed to load workspace')
+        }
+      })
+      .finally(() => setWsLoading(false))
+  }, [id])
+
+  if (wsLoading) {
+    return (
+      <div className="app-shell" style={{ flexDirection: 'column' }}>
+        <Topbar onMenuToggle={() => {}} />
+        <div className="page-loader"><div className="spinner-lg" /></div>
+      </div>
+    )
+  }
+
+  if (wsError) {
+    return (
+      <div className="app-shell" style={{ flexDirection: 'column' }}>
+        <Topbar onMenuToggle={() => {}} />
+        <div className="empty-state" style={{ flex: 1 }}>
+          <div className="empty-state-title">Something went wrong</div>
+          <div className="empty-state-desc">{wsError}</div>
+          <button className="btn-sm btn-sm-primary" onClick={() => navigate('/dashboard')}>
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <EnvironmentProvider>
+    <WorkspaceProvider workspaceId={id}>
+      <WorkspaceContent
+        workspace={workspace}
+        onWorkspaceSaved={setWorkspace}
+      />
     </WorkspaceProvider>
     </EnvironmentProvider>
   )
