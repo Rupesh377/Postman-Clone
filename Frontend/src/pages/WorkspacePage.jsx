@@ -251,7 +251,7 @@ function NoRequestSelected({ onNew }) {
 // Owns all the request/collection selection state so handleNewRequest can
 // default activeCollection to the first available collection.
 function WorkspaceContent({ workspace, onWorkspaceSaved }) {
-  const { collections } = useWorkspace()
+  const { collections, loadCollections } = useWorkspace()
 
   const [sidebarCollapsed, setSidebar]          = useState(false)
   const [activeRequest, setActiveRequest]       = useState(null)
@@ -259,15 +259,19 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
   const [showMembers, setShowMembers]           = useState(false)
   const [showEdit, setShowEdit]                 = useState(false)
 
+  // Load collections on mount so handleNewRequest can default to collections[0].
+  useEffect(() => {
+    loadCollections()
+  }, [loadCollections])
+
   // When a request is selected from the sidebar, track its collection too.
   const handleSelectRequest = (request) => {
     setActiveRequest(request)
     setActiveCollection(request.collectionId)
   }
 
-  // FIX: if no collection has been selected yet, default to the first available
-  // one so the RequestBuilder always renders and "Save to Collection" has a
-  // valid collectionId to post to.
+  // Default to the first available collection so the RequestBuilder always
+  // renders and "Save to Collection" has a valid collectionId to post to.
   const handleNewRequest = () => {
     setActiveRequest(null)
     setActiveCollection((prev) => prev ?? collections[0]?.id ?? null)
