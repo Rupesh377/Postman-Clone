@@ -256,6 +256,7 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
   const [sidebarCollapsed, setSidebar]          = useState(false)
   const [activeRequest, setActiveRequest]       = useState(null)
   const [activeCollection, setActiveCollection] = useState(null)
+  const [activeFolder, setActiveFolder]         = useState(null)
   const [showMembers, setShowMembers]           = useState(false)
   const [showEdit, setShowEdit]                 = useState(false)
 
@@ -268,13 +269,14 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
   const handleSelectRequest = (request) => {
     setActiveRequest(request)
     setActiveCollection(request.collectionId)
+    setActiveFolder(request.folderId || null)
   }
 
-  // Default to the first available collection so the RequestBuilder always
-  // renders and "Save to Collection" has a valid collectionId to post to.
-  const handleNewRequest = () => {
+  // Called from sidebar + buttons — opens RequestBuilder pre-scoped to collection/folder.
+  const handleNewRequest = (collectionId, folderId) => {
     setActiveRequest(null)
-    setActiveCollection((prev) => prev ?? collections[0]?.id ?? null)
+    setActiveCollection(collectionId ?? collections[0]?.id ?? null)
+    setActiveFolder(folderId ?? null)
   }
 
   return (
@@ -349,18 +351,20 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
             onSelectRequest={handleSelectRequest}
             activeRequestId={activeRequest?.id}
             collapsed={sidebarCollapsed}
+            onNewRequest={handleNewRequest}
           />
 
           {/* Content area */}
           <div className="main-content">
             {activeRequest === null && activeCollection === null ? (
-              <NoRequestSelected onNew={handleNewRequest} />
+              <NoRequestSelected onNew={() => handleNewRequest()} />
             ) : (
               <RequestBuilder
                 request={activeRequest}
                 collectionId={activeCollection || activeRequest?.collectionId}
+                folderId={activeFolder}
                 onSaved={(saved) => setActiveRequest(saved)}
-                onNew={handleNewRequest}
+                onNew={() => handleNewRequest()}
               />
             )}
           </div>

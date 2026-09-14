@@ -258,8 +258,8 @@ function HistoryPanel({ requestId, onSelectRun }) {
 
 // ── RequestBuilder ────────────────────────────────────────────────────────────
 
-export default function RequestBuilder({ request, collectionId, onSaved, onNew }) {
-  const { addRequestToStore, updateRequestInStore } = useWorkspace()
+export default function RequestBuilder({ request, collectionId, folderId: folderIdProp, onSaved, onNew }) {
+  const { addRequestToStore, addRequestToFolderStore, updateRequestInStore } = useWorkspace()
   const { activeEnvironment } = useEnvironment()
 
   const [name, setName] = useState('')
@@ -410,7 +410,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
       headers: serializeKV(headers) || null,
       queryParams: serializeQueryParams(params) || null,
       body: body.trim() || null,
-      folderId: request?.folderId || null,
+      folderId: request?.folderId ?? folderIdProp ?? null,
     }
 
     try {
@@ -420,7 +420,12 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
         onSaved?.(res.data)
       } else {
         const res = await createRequestApi(collectionId, payload)
-        addRequestToStore(collectionId, res.data)
+        const savedFolderId = res.data.folderId || folderIdProp || null
+        if (savedFolderId) {
+          addRequestToFolderStore(savedFolderId, res.data)
+        } else {
+          addRequestToStore(collectionId, res.data)
+        }
         onSaved?.(res.data)
       }
       setSaved(true)
