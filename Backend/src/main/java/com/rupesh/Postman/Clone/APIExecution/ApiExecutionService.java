@@ -4,9 +4,12 @@ package com.rupesh.Postman.Clone.APIExecution;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.APIRequest.ApiRequest;
 import com.rupesh.Postman.Clone.APIRequest.ApiRequestRepository;
+import com.rupesh.Postman.Clone.History.RequestHistoryRepository;
+import com.rupesh.Postman.Clone.History.RequestHistoryService;
 import com.rupesh.Postman.Clone.Variable.VariableResolver;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
@@ -26,67 +29,92 @@ public class ApiExecutionService {
     private final APIExecutionRepository apiExecutionRepository;
     private final ObjectMapper objectMapper;
     private final VariableResolver variableResolver;
+    private final RequestHistoryService requestHistoryService;
 
-    public ApiExecutionResponseDTO execute(Long requestId , Long environmentId) {
+    public ApiExecutionResponseDTO execute(Long requestId, Long environmentId, Authentication authentication) {
+
         long startTime = System.currentTimeMillis();
         try {
-            ApiRequest apiRequest = apiRequestRepository.findById(requestId)
-                    .orElseThrow(() -> new ResourceNotFoundException("API Request not found with id: " + requestId));
+            ApiRequest apiRequest = apiRequestRepository.findById(requestId).orElseThrow(() ->
+                            new ResourceNotFoundException("API Request not found with id: " + requestId));
 
             String resolvedUrl = variableResolver.resolve(apiRequest.getUrl(), environmentId);
 
-            //String url = buildUrl(apiRequest);
+            Map<String, String> queryParams = convertJsonToMap(apiRequest.getQueryParams());
+
+            UriComponentsBuilder urlBuilder=UriComponentsBuilder.fromUriString(resolvedUrl);
+
+            if (queryParams != null)
+            {
+                queryParams.forEach((key, value) -> {
+                    String resolvedKey = variableResolver.resolve(key, environmentId);
+
+                    String resolvedValue = variableResolver.resolve(value, environmentId);
+
+                    urlBuilder.queryParam(resolvedKey, resolvedValue);
+                });
+            }
+            resolvedUrl = urlBuilder.toUriString();
+
             RestClient.RequestBodySpec requestSpec = restClient
                     .method(org.springframework.http.HttpMethod.valueOf(apiRequest.getMethod().name()))
                     .uri(resolvedUrl);
 
-            Map<String, String> headers = convertJsonToMap(apiRequest.getHeaders());
-            if (headers != null) {
-                headers.forEach(requestSpec::header);
+            Map<String, String> headers=convertJsonToMap(apiRequest.getHeaders());
+
+            if (headers != null)
+            {
+                headers.forEach((key,value) -> {
+                    String resolvedKey=variableResolver.resolve(key, environmentId);
+
+                    String resolvedValue=variableResolver.resolve(value, environmentId);
+                    requestSpec.header(resolvedKey, resolvedValue);
+                });
             }
             ResponseEntity<String> response;
 
             if (apiRequest.getBody() != null && !apiRequest.getBody().isBlank()) {
 
                 response = requestSpec.body(apiRequest.getBody())
-                        .exchange((request, clientResponse) -> ResponseEntity
-                                        .status(clientResponse.getStatusCode())
+                        .exchange((request, clientResponse) ->
+                                ResponseEntity.status(clientResponse.getStatusCode())
                                         .headers(clientResponse.getHeaders())
                                         .body(clientResponse.bodyTo(String.class)));
             }
             else
             {
                 response = requestSpec.exchange((request, clientResponse) ->
-                                ResponseEntity.status(clientResponse.getStatusCode())
-                                        .headers(clientResponse.getHeaders())
-                                        .body(clientResponse.bodyTo(String.class)));
+                        ResponseEntity.status(clientResponse.getStatusCode())
+                                .headers(clientResponse.getHeaders())
+                                .body(clientResponse.bodyTo(String.class)));
             }
 
+            long responseTime=System.currentTimeMillis() - startTime;
+            requestHistoryService.saveHistory(apiRequest.getName(), apiRequest.getMethod(),
+                    resolvedUrl, response.getStatusCode().value(), responseTime, authentication);
 
-            long responseTime = System.currentTimeMillis()-startTime;
             return ApiExecutionResponseDTO.builder()
                     .statusCode(response.getStatusCode().value())
                     .headers(convertHeaders(String.valueOf(response.getHeaders())))
                     .body(response.getBody())
                     .responseTime(responseTime)
                     .build();
-
-        }catch(ResourceAccessException exception) {
-
+        } catch (ResourceAccessException exception) {
             long responseTime = System.currentTimeMillis() - startTime;
+
             return ApiExecutionResponseDTO.builder()
                     .statusCode(0)
                     .headers(Map.of())
                     .body("Connection failed or request timed out: " + exception.getMessage())
                     .responseTime(responseTime)
                     .build();
+        } catch (Exception exception) {
+            long responseTime = System.currentTimeMillis() - startTime;
 
-        }catch (Exception exception) {
-            long responseTime = System.currentTimeMillis() -startTime;
             return ApiExecutionResponseDTO.builder()
                     .statusCode(0)
                     .headers(Map.of())
-                    .body("Request execution failed: " +exception.getMessage())
+                    .body("Request execution failed: " + exception.getMessage())
                     .responseTime(responseTime)
                     .build();
         }

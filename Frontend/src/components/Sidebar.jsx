@@ -118,7 +118,7 @@ function InlineEdit({ value, onSave, className }) {
   )
 }
 
-function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, onDeleteFolder, onDeleteRequest, onRenameFolder }) {
+function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, onDeleteFolder, onDeleteRequest, onRenameFolder, onNewRequest }) {
   const [open, setOpen] = useState(false)
   const { requests, loadRequestsForFolder } = useWorkspace()
   const key = `fold_${folder.id}`
@@ -142,6 +142,14 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
           onSave={(name) => onRenameFolder(folder, name)}
         />
         <div className="tree-item-actions">
+          <button
+            className="tree-item-action-btn"
+            title="Add request to folder"
+            onClick={(e) => { e.stopPropagation(); setOpen(true); if (!folderRequests) loadRequestsForFolder(folder.id); onNewRequest(collectionId, folder.id) }}
+            aria-label="Add request to folder"
+          >
+            <PlusIcon />
+          </button>
           <button
             className="tree-item-action-btn danger"
             title="Delete folder"
@@ -176,9 +184,10 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
   )
 }
 
-function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection }) {
+function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection, onNewRequest }) {
   const [open, setOpen] = useState(false)
   const [showAddFolder, setShowAddFolder] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const [folderName, setFolderName] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -259,12 +268,31 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
         <div className="tree-item-actions">
           <button
             className="tree-item-action-btn"
-            title="Add folder"
-            onClick={(e) => { e.stopPropagation(); setOpen(true); setShowAddFolder(true) }}
-            aria-label="Add folder"
+            title="Add to collection"
+            onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v) }}
+            aria-label="Add to collection"
           >
             <PlusIcon />
           </button>
+          {showMenu && (
+            <div
+              className="tree-add-menu"
+              onMouseLeave={() => setShowMenu(false)}
+            >
+              <button
+                className="tree-add-menu-item"
+                onClick={(e) => { e.stopPropagation(); setShowMenu(false); setOpen(true); onNewRequest(collection.id, null) }}
+              >
+                New Request
+              </button>
+              <button
+                className="tree-add-menu-item"
+                onClick={(e) => { e.stopPropagation(); setShowMenu(false); setOpen(true); setShowAddFolder(true) }}
+              >
+                New Folder
+              </button>
+            </div>
+          )}
           <button
             className="tree-item-action-btn danger"
             title="Delete collection"
@@ -289,6 +317,7 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
               onDeleteFolder={handleDeleteFolder}
               onRenameFolder={handleRenameFolder}
               onDeleteRequest={handleDeleteRequest}
+              onNewRequest={onNewRequest}
             />
           ))}
 
@@ -329,7 +358,7 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
   )
 }
 
-export default function Sidebar({ workspace, onSelectRequest, activeRequestId, collapsed }) {
+export default function Sidebar({ workspace, onSelectRequest, activeRequestId, collapsed, onNewRequest }) {
   const [showAddCollection, setShowAddCollection] = useState(false)
   const [collectionName, setCollectionName] = useState('')
   const [collectionDesc, setCollectionDesc] = useState('')
@@ -417,6 +446,7 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
               onSelectRequest={onSelectRequest}
               onDeleteCollection={handleDeleteCollection}
               onRenameCollection={handleRenameCollection}
+              onNewRequest={onNewRequest}
             />
           ))}
         </div>
