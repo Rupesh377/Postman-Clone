@@ -10,7 +10,7 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: inherit;
 }
 
 .input-container {

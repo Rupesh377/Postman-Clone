@@ -247,15 +247,16 @@ function EnvironmentManagerModal({ onClose }) {
   )
 
   return (
-    <div className="env-modal">
-      <Modal title="Manage Environments" onClose={onClose}>
+    <Modal title="Environments" onClose={onClose} wide
+      footer={<button className="btn-sm btn-sm-ghost" onClick={onClose} type="button">Close</button>}
+    >
         {/* Create new env */}
         <form onSubmit={handleCreate}>
           <div className="env-create-row">
             <input
               ref={newEnvInputRef}
               className="env-create-input"
-              placeholder="New environment name…"
+              placeholder="Environment name"
               value={newEnvName}
               onChange={(e) => { setNewEnvName(e.target.value); setCreateErr('') }}
               aria-label="New environment name"
@@ -265,7 +266,7 @@ function EnvironmentManagerModal({ onClose }) {
               className="btn-sm btn-sm-primary"
               disabled={creating || !newEnvName.trim()}
             >
-              {creating ? '…' : 'Create'}
+              {creating ? 'Creating' : 'Create'}
             </button>
           </div>
           {createErr && (
@@ -365,11 +366,7 @@ function EnvironmentManagerModal({ onClose }) {
           </>
         )}
 
-        <div className="modal-footer" style={{ marginTop: '4px' }}>
-          <button className="btn-sm btn-sm-ghost" onClick={onClose} type="button">Close</button>
-        </div>
       </Modal>
-    </div>
   )
 }
 

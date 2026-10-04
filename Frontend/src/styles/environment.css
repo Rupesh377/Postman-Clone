@@ -90,11 +90,6 @@
 
 /* ── Environment Manager Modal ───────────────────────────────────────────── */
 
-/* wider modal for env manager */
-.env-modal .modal {
-  max-width: 580px;
-}
-
 .env-list {
   display: flex;
   flex-direction: column;

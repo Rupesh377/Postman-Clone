@@ -1,37 +1,52 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useWorkspace } from '../context/WorkspaceContext'
 import { useEnvironment } from '../context/EnvironmentContext'
 import { createRequestApi, updateRequestApi } from '../api/requestApi'
-import { executeRequestApi, getExecutionHistoryApi } from '../api/environmentApi'
+import { executeRequestApi, getExecutionHistoryApi, createEnvironmentApi } from '../api/environmentApi'
 import EnvironmentSelector from './EnvironmentSelector'
 import '../styles/app.css'
 import '../styles/environment.css'
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
+// Parse headers stored as JSON {"k":"v"} or old "K: v\n" lines
 const parseKV = (raw) => {
   if (!raw) return [{ key: '', value: '', enabled: true }]
+  try {
+    const obj = JSON.parse(raw)
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      const pairs = Object.entries(obj).map(([k, v]) => ({ key: k, value: v, enabled: true }))
+      return [...pairs, { key: '', value: '', enabled: true }]
+    }
+  } catch {}
+  // fallback: "Key: value" lines
   const lines = raw.split('\n').filter(Boolean)
   const pairs = lines.map((line) => {
     const idx = line.indexOf(':')
     if (idx === -1) return { key: line.trim(), value: '', enabled: true }
-    return {
-      key: line.slice(0, idx).trim(),
-      value: line.slice(idx + 1).trim(),
-      enabled: true,
-    }
+    return { key: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim(), enabled: true }
   })
   return pairs.length ? [...pairs, { key: '', value: '', enabled: true }] : [{ key: '', value: '', enabled: true }]
 }
 
-const serializeKV = (pairs) =>
-  pairs
-    .filter((p) => p.enabled && p.key.trim())
-    .map((p) => `${p.key.trim()}: ${p.value.trim()}`)
-    .join('\n')
+// Serialise to JSON {"k":"v"} — backend expects Map<String,String> stored as JSON
+const serializeKV = (pairs) => {
+  const obj = {}
+  pairs.filter((p) => p.enabled && p.key.trim()).forEach((p) => { obj[p.key.trim()] = p.value.trim() })
+  return Object.keys(obj).length ? JSON.stringify(obj) : null
+}
 
+// Parse queryParams stored as JSON {"k":"v"} or old "a=b&c=d" format
 const parseQueryParams = (raw) => {
   if (!raw) return [{ key: '', value: '', enabled: true }]
+  try {
+    const obj = JSON.parse(raw)
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      const pairs = Object.entries(obj).map(([k, v]) => ({ key: k, value: v, enabled: true }))
+      return [...pairs, { key: '', value: '', enabled: true }]
+    }
+  } catch {}
+  // fallback: "a=b&c=d" format
   const pairs = raw.split('&').filter(Boolean).map((pair) => {
     const [k, ...rest] = pair.split('=')
     return { key: decodeURIComponent(k || ''), value: decodeURIComponent(rest.join('=') || ''), enabled: true }
@@ -39,11 +54,20 @@ const parseQueryParams = (raw) => {
   return [...pairs, { key: '', value: '', enabled: true }]
 }
 
-const serializeQueryParams = (pairs) =>
-  pairs
-    .filter((p) => p.enabled && p.key.trim())
-    .map((p) => `${encodeURIComponent(p.key.trim())}=${encodeURIComponent(p.value.trim())}`)
-    .join('&')
+// Serialise to JSON {"k":"v"}
+const serializeQueryParams = (pairs) => {
+  const obj = {}
+  pairs.filter((p) => p.enabled && p.key.trim()).forEach((p) => { obj[p.key.trim()] = p.value.trim() })
+  return Object.keys(obj).length ? JSON.stringify(obj) : null
+}
+
+// Build a full URL with query params appended (for display + direct fetch fallback)
+const buildFullUrl = (baseUrl, params) => {
+  const enabled = params.filter((p) => p.enabled && p.key.trim())
+  if (!enabled.length) return baseUrl
+  const qs = enabled.map((p) => `${encodeURIComponent(p.key.trim())}=${encodeURIComponent(p.value.trim())}`).join('&')
+  return baseUrl.includes('?') ? `${baseUrl}&${qs}` : `${baseUrl}?${qs}`
+}
 
 // ── KVTable (unchanged from original) ────────────────────────────────────────
 
@@ -260,7 +284,7 @@ function HistoryPanel({ requestId, onSelectRun }) {
 
 export default function RequestBuilder({ request, collectionId, onSaved, onNew }) {
   const { addRequestToStore, updateRequestInStore } = useWorkspace()
-  const { activeEnvironment } = useEnvironment()
+  const { activeEnvironment, environments, createEnvironment, selectEnvironment, loadEnvironments, envsLoaded } = useEnvironment()
 
   const [name, setName] = useState('')
   const [method, setMethod] = useState('GET')
@@ -279,6 +303,8 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
   const [saveError, setSaveError] = useState(null)
   const [saved, setSaved] = useState(false)
 
+  // Track the last-saved snapshot to detect unsaved changes
+  const savedSnapshotRef = useRef(null)
   const isEditing = Boolean(request?.id)
 
   useEffect(() => {
@@ -292,6 +318,10 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
       setResponse(null)
       setSendError(null)
       setSaveError(null)
+      savedSnapshotRef.current = {
+        name: request.name || '', method: request.method || 'GET', url: request.url || '',
+        queryParams: request.queryParams || null, headers: request.headers || null, body: request.body || null,
+      }
     } else {
       setName('')
       setMethod('GET')
@@ -300,15 +330,58 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
       setHeaders([{ key: '', value: '', enabled: true }])
       setBody('')
       setResponse(null)
+      savedSnapshotRef.current = null
     }
   }, [request])
 
-  const buildUrl = useCallback(() => {
-    const qs = serializeQueryParams(params)
-    if (!qs) return url
-    const sep = url.includes('?') ? '&' : '?'
-    return `${url}${sep}${qs}`
-  }, [url, params])
+  // ── Save (returns saved request object) ────────────────────────────────────
+
+  const doSave = useCallback(async () => {
+    if (!name.trim()) throw new Error('Give this request a name first')
+    if (!url.trim()) throw new Error('URL is required')
+    if (!collectionId) throw new Error('Select a collection first')
+
+    const fullUrl = buildFullUrl(url.trim(), params)
+    const payload = {
+      name: name.trim(),
+      method,
+      url: fullUrl,
+      headers: serializeKV(headers),
+      queryParams: serializeQueryParams(params),
+      body: body.trim() || null,
+      folderId: request?.folderId || null,
+    }
+
+    if (isEditing) {
+      const res = await updateRequestApi(request.id, payload)
+      updateRequestInStore(collectionId, request.folderId || null, res.data)
+      onSaved?.(res.data)
+      savedSnapshotRef.current = payload
+      return res.data
+    } else {
+      const res = await createRequestApi(collectionId, payload)
+      addRequestToStore(collectionId, res.data)
+      onSaved?.(res.data)
+      savedSnapshotRef.current = payload
+      return res.data
+    }
+  }, [name, method, url, params, headers, body, collectionId, request, isEditing,
+      addRequestToStore, updateRequestInStore, onSaved])
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveError(null)
+    setSaved(false)
+    try {
+      await doSave()
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (err) {
+      setSaveError(err?.response?.data?.message || err?.message || 'Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   // ── Send ────────────────────────────────────────────────────────────────────
 
@@ -318,117 +391,56 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
     setSendError(null)
     setResponse(null)
 
-    // ── Path A: saved request + active environment → backend execution engine ──
-    if (request?.id && activeEnvironment?.id) {
-      try {
-        const res = await executeRequestApi(request.id, activeEnvironment.id)
-        const dto = res.data // { statusCode, headers, body, responseTime }
-        const bodyText = tryFormatJSON(dto.body || '')
-        const size = new TextEncoder().encode(dto.body || '').length
+    try {
+      // 1. Ensure we have a saved request id — save first if needed
+      let savedRequest = request
+      if (!savedRequest?.id) {
+        if (!name.trim() || !collectionId) {
+          setSendError('Save the request to a collection before sending.')
+          setSending(false)
+          return
+        }
+        savedRequest = await doSave()
+      }
 
+      // 2. Ensure we have an active environment — auto-create "Default" if none exist
+      let envId = activeEnvironment?.id
+      if (!envId) {
+        if (!envsLoaded) await loadEnvironments()
+        if (environments.length > 0) {
+          envId = environments[0].id
+          selectEnvironment(envId)
+        } else {
+          const created = await createEnvironment('Default')
+          envId = created.id
+          selectEnvironment(envId)
+        }
+      }
+
+      // 3. Execute via backend
+      const res = await executeRequestApi(savedRequest.id, envId)
+      const dto = res.data
+      const bodyText = tryFormatJSON(dto.body || '')
+      const size = new TextEncoder().encode(dto.body || '').length
+
+      if (dto.statusCode === 0) {
+        setSendError(dto.body || 'Request failed')
+        setResponse({ status: 0, time: dto.responseTime })
+      } else {
         setResponse({
           status: dto.statusCode,
-          // Backend doesn't return statusText; derive a short label from the code
           statusText: httpStatusText(dto.statusCode),
           time: dto.responseTime,
           size,
           body: bodyText,
           headers: dto.headers || {},
         })
-      } catch (err) {
-        setSendError(
-          err?.response?.data?.message ||
-          err?.message ||
-          'Execution failed'
-        )
-        setResponse({ status: null, time: null })
-      } finally {
-        setSending(false)
       }
-      return
-    }
-
-    // ── Path B: unsaved request OR no environment → raw browser fetch (fallback) ──
-    const finalUrl = buildUrl()
-    const headersObj = {}
-    headers.filter((h) => h.enabled && h.key.trim()).forEach((h) => {
-      headersObj[h.key.trim()] = h.value.trim()
-    })
-
-    const hasBody = ['POST', 'PUT', 'PATCH'].includes(method) && body.trim()
-    if (hasBody && !headersObj['Content-Type'] && !headersObj['content-type']) {
-      headersObj['Content-Type'] = 'application/json'
-    }
-
-    const start = performance.now()
-    try {
-      const fetchOptions = {
-        method,
-        headers: headersObj,
-        ...(hasBody ? { body } : {}),
-      }
-      const res = await fetch(finalUrl, fetchOptions)
-      const elapsed = Math.round(performance.now() - start)
-      const text = await res.text()
-      const size = new TextEncoder().encode(text).length
-
-      const resHeaders = {}
-      res.headers.forEach((v, k) => { resHeaders[k] = v })
-
-      setResponse({
-        status: res.status,
-        statusText: res.statusText,
-        time: elapsed,
-        size,
-        body: tryFormatJSON(text),
-        headers: resHeaders,
-      })
     } catch (err) {
-      const elapsed = Math.round(performance.now() - start)
-      setSendError(`Network error: ${err.message}`)
-      setResponse({ status: null, time: elapsed })
+      setSendError(err?.response?.data?.message || err?.message || 'Execution failed')
+      setResponse({ status: null, time: null })
     } finally {
       setSending(false)
-    }
-  }
-
-  // ── Save ────────────────────────────────────────────────────────────────────
-
-  const handleSave = async () => {
-    if (!name.trim()) { setSaveError('Give this request a name first'); return }
-    if (!url.trim())  { setSaveError('URL is required'); return }
-    if (!collectionId) { setSaveError('Select a collection first'); return }
-
-    setSaving(true)
-    setSaveError(null)
-    setSaved(false)
-
-    const payload = {
-      name: name.trim(),
-      method,
-      url: url.trim(),
-      headers: serializeKV(headers) || null,
-      queryParams: serializeQueryParams(params) || null,
-      body: body.trim() || null,
-      folderId: request?.folderId || null,
-    }
-
-    try {
-      if (isEditing) {
-        const res = await updateRequestApi(request.id, payload)
-        updateRequestInStore(collectionId, request.folderId || null, res.data)
-        onSaved?.(res.data)
-      } else {
-        const res = await createRequestApi(collectionId, payload)
-        addRequestToStore(collectionId, res.data)
-        onSaved?.(res.data)
-      }
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
-    } catch (err) {
-      setSaveError(err.response?.data?.message || 'Failed to save')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -448,21 +460,13 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
   const paramCount  = params.filter((p) => p.enabled && p.key).length
   const headerCount = headers.filter((h) => h.enabled && h.key).length
 
-  // Determine which send mode will be used (for tooltip on Send button)
-  const willUseBackend = Boolean(request?.id && activeEnvironment?.id)
-  const sendTitle = willUseBackend
-    ? `Execute via backend (environment: ${activeEnvironment.name})`
-    : request?.id
-      ? 'Select an environment above to use backend execution with {{variable}} resolution'
-      : 'Save this request to a collection to enable backend execution'
-
   return (
     <div className="request-builder">
       {/* ── Name row ── */}
       <div className="request-name-row">
         <input
           className="request-name-input"
-          placeholder="Request name (e.g. Get users)"
+          placeholder="Request name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           aria-label="Request name"
@@ -473,13 +477,8 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
           </svg>
           New
         </button>
-        <button
-          className="btn-sm btn-sm-primary"
-          onClick={handleSave}
-          disabled={saving}
-          type="button"
-        >
-          {saving ? '…' : saved ? '✓ Saved' : isEditing ? 'Save' : 'Save to Collection'}
+        <button className="btn-sm btn-sm-primary" onClick={handleSave} disabled={saving} type="button">
+          {saving ? 'Saving' : saved ? 'Saved' : isEditing ? 'Save' : 'Save to Collection'}
         </button>
       </div>
 
@@ -514,7 +513,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
 
         <input
           className="url-input"
-          placeholder="https://api.example.com/v1/users  (use {{baseUrl}} for env variables)"
+          placeholder="https://api.example.com/endpoint  — use {{var}} for env variables"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }}
@@ -525,9 +524,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
           className="send-btn"
           onClick={handleSend}
           disabled={sending || !url.trim()}
-          title={sendTitle}
           type="button"
-          style={willUseBackend ? { background: 'var(--orange)', transition: 'background var(--transition)' } : {}}
         >
           {sending ? (
             <span className="spinner" style={{ width: '16px', height: '16px' }} />
@@ -537,19 +534,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
                 <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
               Send
-              {/* Small indicator showing backend vs browser mode */}
-              {willUseBackend && (
-                <span style={{
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  background: 'rgba(255,255,255,0.2)',
-                  padding: '1px 5px',
-                  borderRadius: '10px',
-                  letterSpacing: '0.2px',
-                }}>
-                  ENV
-                </span>
-              )}
             </>
           )}
         </button>
@@ -577,25 +561,15 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
 
       <div className="tab-content">
         {activeTab === 'params' && (
-          <KVTable
-            pairs={params}
-            onChange={setParams}
-            keyPlaceholder="param"
-            valuePlaceholder="value"
-          />
+          <KVTable pairs={params} onChange={setParams} keyPlaceholder="param" valuePlaceholder="value" />
         )}
         {activeTab === 'headers' && (
-          <KVTable
-            pairs={headers}
-            onChange={setHeaders}
-            keyPlaceholder="Authorization"
-            valuePlaceholder="Bearer token or header value"
-          />
+          <KVTable pairs={headers} onChange={setHeaders} keyPlaceholder="Header" valuePlaceholder="value" />
         )}
         {activeTab === 'body' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-subtle)' }}>
-              Raw body — paste JSON, form data, or any format your endpoint expects.
+              Raw body — JSON, form data, or any format your endpoint expects.
             </div>
             <textarea
               className="body-editor"
@@ -616,8 +590,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
             <button
               className={`tab-btn ${activeRespTab === 'body' ? 'active' : ''}`}
               onClick={() => setActiveRespTab('body')}
-              role="tab"
-              aria-selected={activeRespTab === 'body'}
+              role="tab" aria-selected={activeRespTab === 'body'}
               style={{ fontSize: '12px', padding: '8px 12px' }}
             >
               Body
@@ -625,8 +598,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
             <button
               className={`tab-btn ${activeRespTab === 'respHeaders' ? 'active' : ''}`}
               onClick={() => setActiveRespTab('respHeaders')}
-              role="tab"
-              aria-selected={activeRespTab === 'respHeaders'}
+              role="tab" aria-selected={activeRespTab === 'respHeaders'}
               style={{ fontSize: '12px', padding: '8px 12px' }}
             >
               Headers
@@ -638,7 +610,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
 
           {response && (
             <div className="response-meta">
-              {response.status && (
+              {response.status != null && response.status !== 0 && (
                 <span className={`response-stat ${statusClass(response.status)}`}>
                   {response.status} {response.statusText}
                 </span>
@@ -662,11 +634,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
         {sendError && (
           <div className="response-body" style={{ color: 'var(--error)' }}>
             {sendError}
-            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-subtle)' }}>
-              {willUseBackend
-                ? 'The backend execution engine returned an error. Check that the target URL is reachable from the server.'
-                : 'Check that the server is reachable and CORS is configured for this origin.'}
-            </div>
           </div>
         )}
 
@@ -676,26 +643,13 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
               style={{ color: 'var(--text-subtle)', marginBottom: '4px' }}>
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
-            <span>Enter a URL and hit <strong style={{ color: 'var(--text-muted)' }}>Send</strong></span>
-            {!request?.id && (
-              <span style={{ fontSize: '11px', color: 'var(--text-subtle)' }}>
-                Save to a collection to enable backend execution with <code style={{ color: 'var(--orange)' }}>{'{{variables}}'}</code>
-              </span>
-            )}
-            {request?.id && !activeEnvironment && (
-              <span style={{ fontSize: '11px', color: 'var(--text-subtle)' }}>
-                Select an environment above to use <code style={{ color: 'var(--orange)' }}>{'{{variable}}'}</code> resolution
-              </span>
-            )}
-            {!request?.id && !activeEnvironment && (
-              <span style={{ fontSize: '12px' }}>The response will appear here</span>
-            )}
+            <span>Enter a URL and hit Send</span>
           </div>
         )}
 
         {response && activeRespTab === 'body' && (
           <div className="response-body" aria-live="polite">
-            {response.body ?? <span style={{ color: 'var(--text-subtle)', fontStyle: 'italic' }}>Empty response body</span>}
+            {response.body ?? <span style={{ color: 'var(--text-subtle)', fontStyle: 'italic' }}>Empty body</span>}
           </div>
         )}
 
@@ -705,22 +659,12 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
               <div style={{ fontSize: '13px', color: 'var(--text-subtle)' }}>No headers returned</div>
             ) : (
               <table className="kv-table">
-                <thead>
-                  <tr><th>Header</th><th>Value</th></tr>
-                </thead>
+                <thead><tr><th>Header</th><th>Value</th></tr></thead>
                 <tbody>
                   {Object.entries(response.headers).map(([k, v]) => (
                     <tr key={k}>
-                      <td>
-                        <span className="kv-input" style={{ display: 'block', color: 'var(--text-secondary)', background: 'transparent', border: 'none', padding: '4px 8px' }}>
-                          {k}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="kv-input" style={{ display: 'block', color: 'var(--text-muted)', background: 'transparent', border: 'none', padding: '4px 8px', wordBreak: 'break-all' }}>
-                          {v}
-                        </span>
-                      </td>
+                      <td><span className="kv-input" style={{ display: 'block', color: 'var(--text-secondary)', background: 'transparent', border: 'none', padding: '4px 8px' }}>{k}</span></td>
+                      <td><span className="kv-input" style={{ display: 'block', color: 'var(--text-muted)', background: 'transparent', border: 'none', padding: '4px 8px', wordBreak: 'break-all' }}>{v}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -730,7 +674,6 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
         )}
       </div>
 
-      {/* ── Run History panel (only for saved requests) ── */}
       <HistoryPanel requestId={request?.id} onSelectRun={handleSelectHistoryRun} />
     </div>
   )

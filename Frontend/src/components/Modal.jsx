@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import '../styles/app.css'
 
-export default function Modal({ title, onClose, children, footer }) {
+export default function Modal({ title, onClose, children, footer, wide }) {
   // Close on Escape key
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
@@ -17,7 +17,7 @@ export default function Modal({ title, onClose, children, footer }) {
       aria-labelledby="modal-title"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="modal">
+      <div className="modal" style={wide ? { maxWidth: 580 } : undefined}>
         <div className="modal-header">
           <h2 className="modal-title" id="modal-title">{title}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close modal">
