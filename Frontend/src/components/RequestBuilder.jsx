@@ -444,6 +444,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
     }
   }
 
+
   // Load a historical run into the response panel
   const handleSelectHistoryRun = (run) => {
     setResponse({

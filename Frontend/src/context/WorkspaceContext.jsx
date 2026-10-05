@@ -99,6 +99,14 @@ export function WorkspaceProvider({ workspaceId, children }) {
     }))
   }, [])
 
+  const addRequestToFolderStore = useCallback((folderId, request) => {
+    const key = `fold_${folderId}`
+    setRequests((prev) => ({
+      ...prev,
+      [key]: [...(prev[key] || []), request],
+    }))
+  }, [])
+
   const updateRequestInStore = useCallback((collectionId, folderId, updated) => {
     const key = folderId ? `fold_${folderId}` : `col_${collectionId}`
     setRequests((prev) => ({
@@ -132,6 +140,7 @@ export function WorkspaceProvider({ workspaceId, children }) {
         addFolder,
         removeFolder,
         addRequestToStore,
+        addRequestToFolderStore,
         updateRequestInStore,
         removeRequestFromStore,
       }}
