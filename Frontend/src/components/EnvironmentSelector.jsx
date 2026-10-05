@@ -384,16 +384,28 @@ export default function EnvironmentSelector() {
 
   const [showManager, setShowManager] = useState(false)
 
-  // Load environments once on mount (lazy — only when this strip is rendered)
+  // Load environments once on mount
   useEffect(() => {
     if (!envsLoaded && !envsLoading) {
       loadEnvironments()
     }
   }, [envsLoaded, envsLoading, loadEnvironments])
 
+  // After environments load, restore the last-selected id from localStorage
+  useEffect(() => {
+    if (!envsLoaded || environments.length === 0) return
+    const stored = localStorage.getItem('selectedEnvId')
+    const id = stored ? Number(stored) : null
+    const found = id && environments.find((e) => e.id === id)
+    selectEnvironment(found ? found.id : environments[0].id)
+  }, [envsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSelectChange = (e) => {
     const val = e.target.value
-    selectEnvironment(val === '' ? null : Number(val))
+    const id = val === '' ? null : Number(val)
+    if (id) localStorage.setItem('selectedEnvId', id)
+    else localStorage.removeItem('selectedEnvId')
+    selectEnvironment(id)
   }
 
   return (

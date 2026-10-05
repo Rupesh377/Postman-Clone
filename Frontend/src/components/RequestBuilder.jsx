@@ -282,7 +282,7 @@ function HistoryPanel({ requestId, onSelectRun }) {
 
 // ── RequestBuilder ────────────────────────────────────────────────────────────
 
-export default function RequestBuilder({ request, collectionId, onSaved, onNew }) {
+export default function RequestBuilder({ request, collectionId, folderId, onSaved, onNew }) {
   const { addRequestToStore, updateRequestInStore } = useWorkspace()
   const { activeEnvironment, environments, createEnvironment, selectEnvironment, loadEnvironments, envsLoaded } = useEnvironment()
 
@@ -311,8 +311,14 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
     if (request) {
       setName(request.name || '')
       setMethod(request.method || 'GET')
-      setUrl(request.url || '')
-      setParams(parseQueryParams(request.queryParams))
+      // Strip any baked-in QS from the stored url back into the params table
+      const rawUrl = request.url || ''
+      const qMark = rawUrl.indexOf('?')
+      const baseUrl = qMark === -1 ? rawUrl : rawUrl.slice(0, qMark)
+      const storedQS = qMark === -1 ? '' : rawUrl.slice(qMark + 1)
+      setUrl(baseUrl)
+      // Prefer stored queryParams JSON; fall back to QS in url for old records
+      setParams(parseQueryParams(request.queryParams || storedQS || null))
       setHeaders(parseKV(request.headers))
       setBody(request.body || '')
       setResponse(null)
@@ -342,14 +348,20 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
     if (!collectionId) throw new Error('Select a collection first')
 
     const fullUrl = buildFullUrl(url.trim(), params)
+    const headersToSave = serializeKV(headers)
+    let headersObj = {}
+    try { headersObj = headersToSave ? JSON.parse(headersToSave) : {} } catch {}
+    if (body.trim() && !Object.keys(headersObj).some((k) => k.toLowerCase() === 'content-type')) {
+      headersObj['Content-Type'] = 'application/json'
+    }
     const payload = {
       name: name.trim(),
       method,
       url: fullUrl,
-      headers: serializeKV(headers),
+      headers: Object.keys(headersObj).length ? JSON.stringify(headersObj) : null,
       queryParams: serializeQueryParams(params),
       body: body.trim() || null,
-      folderId: request?.folderId || null,
+      folderId: folderId ?? request?.folderId ?? null,
     }
 
     if (isEditing) {
@@ -365,7 +377,7 @@ export default function RequestBuilder({ request, collectionId, onSaved, onNew }
       savedSnapshotRef.current = payload
       return res.data
     }
-  }, [name, method, url, params, headers, body, collectionId, request, isEditing,
+  }, [name, method, url, params, headers, body, collectionId, folderId, request, isEditing,
       addRequestToStore, updateRequestInStore, onSaved])
 
   const handleSave = async () => {
