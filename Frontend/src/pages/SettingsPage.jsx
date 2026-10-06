@@ -2,80 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Topbar from '../components/Topbar'
-import api from '../api/axiosInstance'
 import { logoutApi } from '../api/authApi'
 import '../styles/app.css'
 
 export default function SettingsPage() {
-  const { user, accessToken, login, logout } = useAuth()
+  const { user, accessToken, logout } = useAuth()
   const navigate = useNavigate()
-
-  const [profileForm, setProfileForm] = useState({ name: user?.name || '' })
-  const [profileSaving, setProfileSaving] = useState(false)
-  const [profileMsg, setProfileMsg] = useState(null)
-
-  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
-  const [pwErrors, setPwErrors] = useState({})
-  const [pwSaving, setPwSaving] = useState(false)
-  const [pwMsg, setPwMsg] = useState(null)
-
-  const handleProfileChange = (e) => {
-    setProfileForm((p) => ({ ...p, [e.target.name]: e.target.value }))
-    setProfileMsg(null)
-  }
-
-  const handleProfileSave = async (e) => {
-    e.preventDefault()
-    if (!profileForm.name.trim()) return
-    setProfileSaving(true)
-    setProfileMsg(null)
-    try {
-      const stored = JSON.parse(localStorage.getItem('user') || '{}')
-      const updated = { ...stored, name: profileForm.name.trim() }
-      localStorage.setItem('user', JSON.stringify(updated))
-      login({ accessToken, refreshToken: localStorage.getItem('refreshToken'), user: updated })
-      setProfileMsg({ type: 'success', text: 'Name updated.' })
-    } catch {
-      setProfileMsg({ type: 'error', text: 'Failed to update.' })
-    } finally {
-      setProfileSaving(false)
-    }
-  }
-
-  const handlePwChange = (e) => {
-    setPwForm((p) => ({ ...p, [e.target.name]: e.target.value }))
-    setPwErrors((p) => ({ ...p, [e.target.name]: '' }))
-    setPwMsg(null)
-  }
-
-  const validatePw = () => {
-    const errs = {}
-    if (!pwForm.currentPassword) errs.currentPassword = 'Required'
-    if (!pwForm.newPassword) errs.newPassword = 'Required'
-    else if (pwForm.newPassword.length < 8) errs.newPassword = 'Min 8 characters'
-    if (pwForm.newPassword !== pwForm.confirmPassword) errs.confirmPassword = 'Passwords don\'t match'
-    return errs
-  }
-
-  const handlePwSave = async (e) => {
-    e.preventDefault()
-    const errs = validatePw()
-    if (Object.keys(errs).length) { setPwErrors(errs); return }
-    setPwSaving(true)
-    setPwMsg(null)
-    try {
-      await api.post('/api/v1/auth/change-password', {
-        currentPassword: pwForm.currentPassword,
-        newPassword: pwForm.newPassword,
-      })
-      setPwMsg({ type: 'success', text: 'Password changed.' })
-      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-    } catch (err) {
-      setPwMsg({ type: 'error', text: err.response?.data?.message || 'Failed to change password.' })
-    } finally {
-      setPwSaving(false)
-    }
-  }
 
   const handleLogout = async () => {
     try { await logoutApi(accessToken) } catch {}
@@ -96,105 +28,35 @@ export default function SettingsPage() {
         <section className="settings-section">
           <div className="settings-section-meta">
             <h2 className="settings-section-title">Profile</h2>
-            <p className="settings-section-desc">Your display name and account details.</p>
+            <p className="settings-section-desc">Your account details.</p>
           </div>
           <div className="settings-section-body">
-            {/* Avatar + name row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
               <div style={{
-                width: 44, height: 44,
-                borderRadius: 'var(--radius-sm)',
+                width: 44, height: 44, borderRadius: 'var(--radius-sm)',
                 background: 'var(--orange)', color: '#fff',
                 fontSize: '15px', fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, letterSpacing: 0,
+                flexShrink: 0,
               }}>
                 {initials}
               </div>
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
-                  {user?.name}
-                </div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{user?.name}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{user?.email}</div>
               </div>
             </div>
 
-            {profileMsg && (
-              <div className={`alert alert-${profileMsg.type}`}>{profileMsg.text}</div>
-            )}
-
-            <form onSubmit={handleProfileSave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="field">
-                <label className="field-label" htmlFor="s-name">Display name</label>
-                <input
-                  id="s-name" name="name"
-                  className="field-input"
-                  value={profileForm.name}
-                  onChange={handleProfileChange}
-                  placeholder="Your name"
-                />
-              </div>
-              <div className="field">
-                <label className="field-label">Email</label>
-                <input
-                  className="field-input"
-                  value={user?.email || ''}
-                  disabled
-                  style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                />
-                <span style={{ fontSize: '11.5px', color: 'var(--text-subtle)' }}>
-                  Email address can't be changed.
-                </span>
-              </div>
-              <div>
-                <button
-                  type="submit"
-                  className="btn-sm btn-sm-primary"
-                  disabled={profileSaving || !profileForm.name.trim()}
-                >
-                  {profileSaving ? 'Saving…' : 'Save name'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </section>
-
-        <section className="settings-section">
-          <div className="settings-section-meta">
-            <h2 className="settings-section-title">Password</h2>
-            <p className="settings-section-desc">
-              Update your password. You'll stay signed in on this device after changing it.
-            </p>
-          </div>
-          <div className="settings-section-body">
-            {pwMsg && (
-              <div className={`alert alert-${pwMsg.type}`}>{pwMsg.text}</div>
-            )}
-            <form onSubmit={handlePwSave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[
-                { id: 'cur-pw',  name: 'currentPassword', label: 'Current password',      placeholder: 'Your current password', ac: 'current-password' },
-                { id: 'new-pw',  name: 'newPassword',      label: 'New password',           placeholder: 'Min. 8 characters',     ac: 'new-password' },
-                { id: 'conf-pw', name: 'confirmPassword',  label: 'Confirm new password',   placeholder: 'Re-enter new password', ac: 'new-password' },
-              ].map(({ id, name, label, placeholder, ac }) => (
-                <div className="field" key={name}>
-                  <label className="field-label" htmlFor={id}>{label}</label>
-                  <input
-                    id={id} name={name} type="password"
-                    className={`field-input${pwErrors[name] ? ' input-error' : ''}`}
-                    value={pwForm[name]}
-                    onChange={handlePwChange}
-                    placeholder={placeholder}
-                    autoComplete={ac}
-                  />
-                  {pwErrors[name] && <span className="field-error">{pwErrors[name]}</span>}
-                </div>
-              ))}
-              <div>
-                <button type="submit" className="btn-sm btn-sm-primary" disabled={pwSaving}>
-                  {pwSaving ? 'Updating…' : 'Update password'}
-                </button>
-              </div>
-            </form>
+            <div className="field">
+              <label className="field-label">Display name</label>
+              <input className="field-input" value={user?.name || ''} readOnly
+                style={{ opacity: 0.5, cursor: 'default' }} />
+            </div>
+            <div className="field">
+              <label className="field-label">Email</label>
+              <input className="field-input" value={user?.email || ''} readOnly
+                style={{ opacity: 0.4, cursor: 'default' }} />
+            </div>
           </div>
         </section>
 

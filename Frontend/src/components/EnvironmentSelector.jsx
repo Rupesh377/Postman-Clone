@@ -247,15 +247,16 @@ function EnvironmentManagerModal({ onClose }) {
   )
 
   return (
-    <div className="env-modal">
-      <Modal title="Manage Environments" onClose={onClose}>
+    <Modal title="Environments" onClose={onClose} wide
+      footer={<button className="btn-sm btn-sm-ghost" onClick={onClose} type="button">Close</button>}
+    >
         {/* Create new env */}
         <form onSubmit={handleCreate}>
           <div className="env-create-row">
             <input
               ref={newEnvInputRef}
               className="env-create-input"
-              placeholder="New environment name…"
+              placeholder="Environment name"
               value={newEnvName}
               onChange={(e) => { setNewEnvName(e.target.value); setCreateErr('') }}
               aria-label="New environment name"
@@ -265,7 +266,7 @@ function EnvironmentManagerModal({ onClose }) {
               className="btn-sm btn-sm-primary"
               disabled={creating || !newEnvName.trim()}
             >
-              {creating ? '…' : 'Create'}
+              {creating ? 'Creating' : 'Create'}
             </button>
           </div>
           {createErr && (
@@ -365,11 +366,7 @@ function EnvironmentManagerModal({ onClose }) {
           </>
         )}
 
-        <div className="modal-footer" style={{ marginTop: '4px' }}>
-          <button className="btn-sm btn-sm-ghost" onClick={onClose} type="button">Close</button>
-        </div>
       </Modal>
-    </div>
   )
 }
 
@@ -387,16 +384,28 @@ export default function EnvironmentSelector() {
 
   const [showManager, setShowManager] = useState(false)
 
-  // Load environments once on mount (lazy — only when this strip is rendered)
+  // Load environments once on mount
   useEffect(() => {
     if (!envsLoaded && !envsLoading) {
       loadEnvironments()
     }
   }, [envsLoaded, envsLoading, loadEnvironments])
 
+  // After environments load, restore the last-selected id from localStorage
+  useEffect(() => {
+    if (!envsLoaded || environments.length === 0) return
+    const stored = localStorage.getItem('selectedEnvId')
+    const id = stored ? Number(stored) : null
+    const found = id && environments.find((e) => e.id === id)
+    selectEnvironment(found ? found.id : environments[0].id)
+  }, [envsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSelectChange = (e) => {
     const val = e.target.value
-    selectEnvironment(val === '' ? null : Number(val))
+    const id = val === '' ? null : Number(val)
+    if (id) localStorage.setItem('selectedEnvId', id)
+    else localStorage.removeItem('selectedEnvId')
+    selectEnvironment(id)
   }
 
   return (
