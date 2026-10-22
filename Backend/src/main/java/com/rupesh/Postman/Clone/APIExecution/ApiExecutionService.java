@@ -4,9 +4,8 @@ package com.rupesh.Postman.Clone.APIExecution;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.APIRequest.ApiRequest;
 import com.rupesh.Postman.Clone.APIRequest.ApiRequestRepository;
-import com.rupesh.Postman.Clone.History.RequestHistoryRepository;
 import com.rupesh.Postman.Clone.History.RequestHistoryService;
-import com.rupesh.Postman.Clone.Variable.VariableResolver;
+import com.rupesh.Postman.Clone.Environment.Variable.VariableResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -90,12 +89,32 @@ public class ApiExecutionService {
             }
 
             long responseTime=System.currentTimeMillis() - startTime;
-            requestHistoryService.saveHistory(apiRequest.getName(), apiRequest.getMethod(),
+
+            APIExecution apiExecution = APIExecution.builder()
+                    .apiRequest(apiRequest)
+                    .statusCode(response.getStatusCode().value())
+                    .responseHeaders(objectMapper.writeValueAsString(
+                            response.getHeaders().toSingleValueMap()
+                    ))
+                    .responseBody(response.getBody())
+                    .responseTime(responseTime)
+                    .executedAt(java.time.LocalDateTime.now())
+                    .build();
+
+            System.out.println("Saving API execution for requestId: " + requestId);
+
+            APIExecution savedExecution = apiExecutionRepository.save(apiExecution);
+
+            System.out.println("Saved execution ID: " + savedExecution.getId());
+            //apiExecutionRepository.save(apiExecution);
+
+
+            requestHistoryService.saveHistory(apiRequest.getId(), apiRequest.getName(), apiRequest.getMethod(),
                     resolvedUrl, response.getStatusCode().value(), responseTime, authentication);
 
             return ApiExecutionResponseDTO.builder()
                     .statusCode(response.getStatusCode().value())
-                    .headers(convertHeaders(String.valueOf(response.getHeaders())))
+                    .headers(response.getHeaders().toSingleValueMap())
                     .body(response.getBody())
                     .responseTime(responseTime)
                     .build();
@@ -126,7 +145,6 @@ public class ApiExecutionService {
                         new ResourceNotFoundException("API Request not found with id: " + requestId));
 
         List<APIExecution> executions = apiExecutionRepository.findByApiRequestIdOrderByExecutedAtDesc(requestId);
-
         return executions.stream()
                 .map(execution -> {
                     try {
@@ -143,8 +161,7 @@ public class ApiExecutionService {
                 .toList();
     }
 
-    private String buildUrl(ApiRequest apiRequest)
-            throws Exception {
+    private String buildUrl(ApiRequest apiRequest) throws Exception {
 
         String url = apiRequest.getUrl();
         Map<String, String> queryParams = convertJsonToMap(apiRequest.getQueryParams());
@@ -152,9 +169,7 @@ public class ApiExecutionService {
         if (queryParams == null || queryParams.isEmpty()) {
             return url;
         }
-
         StringBuilder queryString = new  StringBuilder();
-
         for (Map.Entry<String, String> entry : queryParams.entrySet()) {
             if (queryString.length() > 0)
                 queryString.append("&");
@@ -164,20 +179,20 @@ public class ApiExecutionService {
         return url + "?" + queryString;
     }
 
-    private Map<String, String> convertJsonToMap(String json) throws Exception {
 
+    private Map<String, String> convertJsonToMap(String json) throws Exception {
         if (json == null || json.isBlank()) {
             return Map.of();
         }
         return objectMapper.readValue(json, new TypeReference<Map<String, String>>() {});
     }
 
+
     private Map<String, String> convertHeaders(String headers)throws Exception {
 
         if (headers == null || headers.isBlank()) {
             return Map.of();
         }
-
         return objectMapper.readValue(
                 headers,
                 new TypeReference<Map<String, String>>() {}

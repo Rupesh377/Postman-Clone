@@ -18,83 +18,85 @@ public class RequestHistoryService {
     private final RequestHistoryRepository requestHistoryRepository;
     private final UserRepository userRepository;
 
-    public void saveHistory(String requestName, HttpMethod method, String url, Integer statusCode,
-                            Long responseTime, Authentication authentication) {
+        public void saveHistory(Long apiRequestId, String requestName, HttpMethod method, String url,
+                                Integer statusCode, Long responseTime, Authentication authentication) {
 
-        User user = getLoggedInUser(authentication);
-        RequestHistory history = new RequestHistory();
+            User user = getLoggedInUser(authentication);
 
-        history.setRequestName(requestName);
-        history.setMethod(method);
-        history.setUrl(url);
-        history.setStatusCode(statusCode);
-        history.setResponseTime(responseTime);
-        history.setExecutedAt(LocalDateTime.now());
-        history.setUser(user);
+            requestHistoryRepository.findByUserAndApiRequestId(user, apiRequestId).ifPresent(requestHistoryRepository::delete);
 
-        requestHistoryRepository.save(history);
-    }
+            long historyCount = requestHistoryRepository.countByUser(user);
 
+            if (historyCount >= 10) {
+                requestHistoryRepository.findFirstByUserOrderByExecutedAtAsc(user).ifPresent(requestHistoryRepository::delete);
+            }
 
-    public Page<RequestHistoryResponseDTO> getHistory(Authentication authentication, Pageable pageable) {
+            RequestHistory history = new RequestHistory();
 
-        User user = getLoggedInUser(authentication);
-        Page<RequestHistory> historyPage = requestHistoryRepository.findByUser(user, pageable);
-        return historyPage.map(this::convertToDTO);
-    }
-
-
-    public RequestHistoryResponseDTO getHistoryById(Long historyId, Authentication authentication) {
-
-        User user = getLoggedInUser(authentication);
-        RequestHistory history = requestHistoryRepository.findById(historyId)
-                        .orElseThrow(() -> new RuntimeException("History not found"));
-
-        if (!history.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("You are not allowed to access this history");
-        }
-        return convertToDTO(history);
-    }
-
-
-    public void deleteHistory(Long historyId, Authentication authentication) {
-
-        User user = getLoggedInUser(authentication);
-        RequestHistory history = requestHistoryRepository.findById(historyId)
-                        .orElseThrow(() -> new RuntimeException("History not found"));
-
-        if (!history.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("You are not allowed to delete this history");
+            history.setApiRequestId(apiRequestId);
+            history.setRequestName(requestName);
+            history.setMethod(method);
+            history.setUrl(url);
+            history.setStatusCode(statusCode);
+            history.setResponseTime(responseTime);
+            history.setExecutedAt(LocalDateTime.now());
+            history.setUser(user);
+            requestHistoryRepository.save(history);
         }
 
-        requestHistoryRepository.delete(history);
+        public Page<RequestHistoryResponseDTO> getHistory(Authentication authentication, Pageable pageable) {
+            User user = getLoggedInUser(authentication);
+            return requestHistoryRepository.findByUser(user, pageable).map(this::convertToDTO);
+        }
+
+        public RequestHistoryResponseDTO getHistoryById(Long historyId, Authentication authentication) {
+            User user = getLoggedInUser(authentication);
+            RequestHistory history = requestHistoryRepository.findById(historyId).orElseThrow(()
+                    -> new RuntimeException("History not found"));
+
+
+            if (!history.getUser().getId().equals(user.getId())) {
+                throw new RuntimeException("You are not allowed to access this history");
+            }
+            return convertToDTO(history);
+        }
+
+        public void deleteHistory(Long historyId, Authentication authentication) {
+
+            User user = getLoggedInUser(authentication);
+            RequestHistory history = requestHistoryRepository.findById(historyId)
+                            .orElseThrow(() -> new RuntimeException("History not found"));
+
+            if (!history.getUser().getId().equals(user.getId())) {
+                throw new RuntimeException("You are not allowed to delete this history");
+            }
+            requestHistoryRepository.delete(history);
+        }
+
+        public void deleteAllHistory(Authentication authentication) {
+
+            User user = getLoggedInUser(authentication);
+            requestHistoryRepository.deleteAll(requestHistoryRepository.findByUser(user, Pageable.unpaged()).getContent());
+        }
+
+        private RequestHistoryResponseDTO convertToDTO(RequestHistory history) {
+
+            RequestHistoryResponseDTO dto = new RequestHistoryResponseDTO();
+
+            dto.setId(history.getId());
+            dto.setRequestName(history.getRequestName());
+            dto.setMethod(history.getMethod());
+            dto.setUrl(history.getUrl());
+            dto.setStatusCode(history.getStatusCode());
+            dto.setResponseTime(history.getResponseTime());
+            dto.setExecutedAt(history.getExecutedAt());
+
+            return dto;
+        }
+
+        private User getLoggedInUser(Authentication authentication) {
+
+            String email = authentication.getName();
+            return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        }
     }
-
-
-    public void deleteAllHistory(Authentication authentication) {
-        User user = getLoggedInUser(authentication);
-        Page<RequestHistory> historyPage = requestHistoryRepository.findByUser(user, Pageable.unpaged());
-
-        requestHistoryRepository.deleteAll(historyPage.getContent());
-    }
-
-
-    private RequestHistoryResponseDTO convertToDTO(RequestHistory history) {
-
-        RequestHistoryResponseDTO dto = new RequestHistoryResponseDTO();
-        dto.setId(history.getId());
-        dto.setRequestName(history.getRequestName());
-        dto.setMethod(history.getMethod());
-        dto.setUrl(history.getUrl());
-        dto.setStatusCode(history.getStatusCode());
-        dto.setResponseTime(history.getResponseTime());
-        dto.setExecutedAt(history.getExecutedAt());
-
-        return dto;
-    }
-
-    private User getLoggedInUser(Authentication authentication) {
-        String email = authentication.getName();
-        return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-    }
-}

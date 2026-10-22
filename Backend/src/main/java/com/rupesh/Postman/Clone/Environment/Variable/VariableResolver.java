@@ -1,4 +1,4 @@
-package com.rupesh.Postman.Clone.Variable;
+package com.rupesh.Postman.Clone.Environment.Variable;
 
 import com.rupesh.Postman.Clone.Environment.EnvironmentVariable.EnvironmentVariableRepository;
 import lombok.RequiredArgsConstructor;
