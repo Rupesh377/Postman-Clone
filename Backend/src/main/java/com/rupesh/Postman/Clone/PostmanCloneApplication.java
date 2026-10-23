@@ -13,7 +13,7 @@ import java.time.Duration;
 @SpringBootApplication
 public class PostmanCloneApplication {
 
-	public static void main(String[] args) throws IOException, InterruptedException {
+	public static void main(String[] args) {
 		SpringApplication.run(PostmanCloneApplication.class, args);
 	}
 }
