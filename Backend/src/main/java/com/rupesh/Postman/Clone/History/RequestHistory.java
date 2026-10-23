@@ -18,6 +18,8 @@ public class RequestHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long apiRequestId;
+
     private String requestName;
 
     @Enumerated(EnumType.STRING)
