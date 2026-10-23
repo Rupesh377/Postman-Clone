@@ -1,6 +1,5 @@
 package com.rupesh.Postman.Clone.AI;
 
-
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,4 +23,32 @@ public class AIController {
         GenerateBodyResponseDTO response = aiService.generateRequestBody(request);
         return ResponseEntity.ok(response);
     }
+
+
+    @PostMapping("/explain-response")
+    public ResponseEntity<ExplainResponseResponseDTO> explainResponse(@Valid @RequestBody ExplainResponseRequestDTO request) {
+
+        return ResponseEntity.ok(aiService.explainResponse(request));
+    }
+
+    @PostMapping("/suggest-headers")
+    public ResponseEntity<SuggestHeadersResponseDTO> suggestHeaders(@Valid @RequestBody SuggestHeadersRequestDTO request) {
+
+        return ResponseEntity.ok(aiService.suggestHeaders(request));
+    }
+
+
+    @PostMapping("/generate-tests")
+    public ResponseEntity<GenerateTestsResponseDTO> generateTestCases(@Valid @RequestBody GenerateTestsRequestDTO request) {
+
+        return ResponseEntity.ok(aiService.generateTestCases(request));
+    }
+
+
+    @PostMapping("/generate-docs")
+    public ResponseEntity<GenerateDocsResponseDTO> generateDocumentation(@Valid @RequestBody GenerateDocsRequestDTO request) {
+
+        return ResponseEntity.ok(aiService.generateDocumentation(request));
+    }
+
 }
