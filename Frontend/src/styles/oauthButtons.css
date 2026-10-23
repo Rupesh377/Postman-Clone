@@ -43,7 +43,7 @@
     border-color var(--transition),
     color var(--transition);
   text-decoration: none;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: inherit;
   letter-spacing: -0.1px;
 }
 .oauth-btn:hover {

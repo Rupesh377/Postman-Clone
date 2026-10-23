@@ -24,14 +24,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
+  height: 38px;
   border-radius: var(--radius-sm);
-  font-size: 13.5px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   border: none;
-  font-family: 'Space Grotesk', sans-serif;
-  letter-spacing: -0.1px;
-  transition: background var(--transition), transform 0.1s ease;
+  font-family: inherit;
+  letter-spacing: 0;
+  transition: background var(--transition);
 }
 .btn-primary {
   background: var(--accent-blue);

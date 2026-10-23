@@ -1,13 +1,5 @@
+import AppLogo from './AppLogo'
 import '../styles/authLayout.css'
-
-// APIForge logo inline SVG
-const AppLogo = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="32" height="32" rx="8" fill="#FF6C37"/>
-    <path d="M8 22l4-12h2l2 6 2-6h2l4 12h-2.5l-1-3h-4l-1 3H8zm5-5h3l-1.5-4.5L13 17z" fill="white"/>
-    <circle cx="24" cy="10" r="3" fill="white" fillOpacity="0.9"/>
-  </svg>
-)
 
 export default function AuthLayout({ children, title, subtitle }) {
   return (
@@ -16,34 +8,30 @@ export default function AuthLayout({ children, title, subtitle }) {
       <div className="auth-left">
         <div className="auth-left-content">
           <div className="auth-brand">
-            <AppLogo />
+            <AppLogo size={28} />
             <span className="auth-brand-name">APIForge</span>
           </div>
           <h1 className="auth-tagline">
-            Build. Test.<br />Ship APIs faster.
+            HTTP client for developers who prefer working over configuring.
           </h1>
           <p className="auth-desc">
-            A personal API testing workspace. Build and save requests,
-            organise them into collections, and iterate fast.
+            Save requests, organise them into collections, resolve environment
+            variables, and inspect responses — all from the browser.
           </p>
           <div className="auth-features">
             <div className="auth-feature">
               <span className="auth-feature-dot" />
-              Collections &amp; folders to organise your requests
+              Collections and folders with drag-free organisation
             </div>
             <div className="auth-feature">
               <span className="auth-feature-dot" />
-              Full HTTP method support with headers, params &amp; body
+              Environment variables with {'{{double-brace}}'} syntax
             </div>
             <div className="auth-feature">
               <span className="auth-feature-dot" />
-              Share workspaces with your team
+              Execution history per request
             </div>
           </div>
-        </div>
-        <div className="auth-left-illustration">
-          <div className="illustration-circle c1" />
-          <div className="illustration-circle c2" />
         </div>
       </div>
 
@@ -52,7 +40,7 @@ export default function AuthLayout({ children, title, subtitle }) {
         <div className="auth-card">
           <div className="auth-card-header">
             <div className="auth-card-logo">
-              <AppLogo />
+              <AppLogo size={28} />
             </div>
             <h2 className="auth-card-title">{title}</h2>
             {subtitle && <p className="auth-card-subtitle">{subtitle}</p>}
