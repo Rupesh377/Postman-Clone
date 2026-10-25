@@ -453,7 +453,7 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
         </div>
 
         {/* Main body: sidebar + content */}
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative', minHeight: 0 }}>
           {/* Mobile backdrop — tap to close sidebar */}
           {!sidebarCollapsed && (
             <div

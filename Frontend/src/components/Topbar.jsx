@@ -67,8 +67,15 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
     if (e.key === 'Escape') { setEditing(false); setEditVal(title || '') }
   }
 
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  const isUUIDVal = (val) =>
+    typeof val === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim())
+
+  const displayName = !user?.name || isUUIDVal(user.name) ? 'User' : user.name
+  const displayEmail = !user?.email || isUUIDVal(user.email) ? 'Email unavailable' : user.email
+
+  const initials = displayName !== 'User'
+    ? displayName.split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U'
 
   return (
@@ -154,8 +161,8 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
             {menuOpen && (
               <div className="dropdown-menu" role="menu">
                 <div style={{ padding: '8px 12px 6px', borderBottom: '1px solid var(--border)', marginBottom: '4px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{user?.name || 'User'}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{user?.email || ''}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{displayName}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{displayEmail}</div>
                 </div>
 
                 <button className="dropdown-item" role="menuitem" onClick={toggleTheme}>

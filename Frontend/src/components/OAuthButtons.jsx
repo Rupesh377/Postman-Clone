@@ -24,11 +24,25 @@ export default function OAuthButtons() {
         <span>or continue with</span>
       </div>
       <div className="oauth-buttons">
-        <a href={getGoogleOAuthUrl()} className="oauth-btn oauth-google">
+        <a
+          href={getGoogleOAuthUrl()}
+          className="oauth-btn oauth-google"
+          onClick={() => {
+            try { sessionStorage.setItem('oauth_provider', 'Google') } catch {}
+          }}
+          aria-label="Sign in with Google"
+        >
           <GoogleIcon />
           <span>Google</span>
         </a>
-        <a href={getGithubOAuthUrl()} className="oauth-btn oauth-github">
+        <a
+          href={getGithubOAuthUrl()}
+          className="oauth-btn oauth-github"
+          onClick={() => {
+            try { sessionStorage.setItem('oauth_provider', 'GitHub') } catch {}
+          }}
+          aria-label="Sign in with GitHub"
+        >
           <GithubIcon />
           <span>GitHub</span>
         </a>
