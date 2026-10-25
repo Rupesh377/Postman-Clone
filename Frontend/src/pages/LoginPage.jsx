@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import AuthLayout from '../components/AuthLayout'
 import InputField from '../components/InputField'
 import OAuthButtons from '../components/OAuthButtons'
@@ -9,12 +9,23 @@ import '../styles/authPage.css'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { login } = useAuth()
 
   const [form, setForm] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
-  const [serverError, setServerError] = useState('')
+  const [serverError, setServerError] = useState(() => {
+    const err = searchParams.get('error')
+    return err === 'oauth_failed' ? 'Social sign-in failed. Please try again.' : (err || '')
+  })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const err = searchParams.get('error')
+    if (err) {
+      setServerError(err === 'oauth_failed' ? 'Social sign-in failed. Please try again.' : err)
+    }
+  }, [searchParams])
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))

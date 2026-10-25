@@ -19,8 +19,10 @@ export const logoutApi = (accessToken) =>
     headers: { Authorization: `Bearer ${accessToken}` }
   })
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'
+
 export const getGoogleOAuthUrl = () =>
-  `http://localhost:8080/oauth2/authorization/google`
+  `${BACKEND_URL}/oauth2/authorization/google`
 
 export const getGithubOAuthUrl = () =>
-  `http://localhost:8080/oauth2/authorization/github`
+  `${BACKEND_URL}/oauth2/authorization/github`

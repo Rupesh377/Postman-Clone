@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useWorkspace } from '../context/WorkspaceContext'
 import { useEnvironment } from '../context/EnvironmentContext'
 import { createRequestApi, updateRequestApi } from '../api/requestApi'
 import { executeRequestApi, getExecutionHistoryApi, createEnvironmentApi } from '../api/environmentApi'
+import { generateBodyApi, suggestHeadersApi, explainResponseApi, generateDocsApi, generateTestsApi } from '../api/aiApi'
 import EnvironmentSelector from './EnvironmentSelector'
+import CodeModal from './CodeModal'
 import '../styles/app.css'
 import '../styles/environment.css'
 
@@ -163,6 +165,40 @@ function tryFormatJSON(text) {
   }
 }
 
+function tokenizeJSON(json) {
+  const regex = /("(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*")(\s*:)?|\b(true|false)\b|\b(null)\b|(-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g
+  const tokens = []
+  let lastIndex = 0
+  let match
+  let i = 0
+
+  while ((match = regex.exec(json)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push(json.slice(lastIndex, match.index))
+    }
+    const [, str, colon, boolVal, nullVal, numVal] = match
+    if (str) {
+      if (colon) {
+        tokens.push(<span key={i++} className="json-key">{str}</span>)
+        tokens.push(colon)
+      } else {
+        tokens.push(<span key={i++} className="json-string">{str}</span>)
+      }
+    } else if (numVal) {
+      tokens.push(<span key={i++} className="json-number">{numVal}</span>)
+    } else if (boolVal) {
+      tokens.push(<span key={i++} className="json-boolean">{boolVal}</span>)
+    } else if (nullVal) {
+      tokens.push(<span key={i++} className="json-null">{nullVal}</span>)
+    }
+    lastIndex = regex.lastIndex
+  }
+  if (lastIndex < json.length) {
+    tokens.push(json.slice(lastIndex))
+  }
+  return tokens
+}
+
 /** Format an ISO timestamp into a short locale string */
 function formatTs(ts) {
   if (!ts) return ''
@@ -282,7 +318,7 @@ function HistoryPanel({ requestId, onSelectRun }) {
 
 // ── RequestBuilder ────────────────────────────────────────────────────────────
 
-export default function RequestBuilder({ request, collectionId, folderId, onSaved, onNew }) {
+export default function RequestBuilder({ request, collectionId, folderId, onSaved, onNew, onDirtyChange }) {
   const { addRequestToStore, updateRequestInStore } = useWorkspace()
   const { activeEnvironment, environments, createEnvironment, selectEnvironment, loadEnvironments, envsLoaded } = useEnvironment()
 
@@ -293,19 +329,77 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
   const [params, setParams] = useState([{ key: '', value: '', enabled: true }])
   const [headers, setHeaders] = useState([{ key: '', value: '', enabled: true }])
   const [body, setBody] = useState('')
+  const [bodyMode, setBodyMode] = useState('json')
+  const [authType, setAuthType] = useState('none')
+  const [authBearer, setAuthBearer] = useState('')
+  const [authBasicUser, setAuthBasicUser] = useState('')
+  const [authBasicPass, setAuthBasicPass] = useState('')
+  const [authApiKeyName, setAuthApiKeyName] = useState('X-API-Key')
+  const [authApiKeyValue, setAuthApiKeyValue] = useState('')
+  const [authApiKeyIn, setAuthApiKeyIn] = useState('header')
 
   const [response, setResponse] = useState(null)
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState(null)
   const [activeRespTab, setActiveRespTab] = useState('body')
+  const [respRaw, setRespRaw] = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [saved, setSaved] = useState(false)
+  const [showCode, setShowCode] = useState(false)
 
   // Track the last-saved snapshot to detect unsaved changes
   const savedSnapshotRef = useRef(null)
   const isEditing = Boolean(request?.id)
+  const onDirtyChangeRef = useRef(onDirtyChange)
+  const lastDirtyRef = useRef(false)
+
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange
+  }, [onDirtyChange])
+
+  // AI state
+  const [aiBodyLoading, setAiBodyLoading]         = useState(false)
+  const [aiBodyError, setAiBodyError]             = useState(null)
+  const [aiBodyDesc, setAiBodyDesc]               = useState('')
+  const [aiHeadersLoading, setAiHeadersLoading]   = useState(false)
+  const [aiHeadersError, setAiHeadersError]       = useState(null)
+  const [aiHeadersSuggestions, setAiHeadersSugg]  = useState(null)
+  const [aiExplainLoading, setAiExplainLoading]   = useState(false)
+  const [aiExplainError, setAiExplainError]       = useState(null)
+  const [aiExplain, setAiExplain]                 = useState(null)
+  const [aiDocsLoading, setAiDocsLoading]         = useState(false)
+  const [aiDocsError, setAiDocsError]             = useState(null)
+  const [aiDocs, setAiDocs]                       = useState(null)
+  const [aiTestsLoading, setAiTestsLoading]       = useState(false)
+  const [aiTestsError, setAiTestsError]           = useState(null)
+  const [aiTests, setAiTests]                     = useState(null)
+
+  const undefinedVars = useMemo(() => {
+    if (!activeEnvironment) return []
+    const envKeys = new Set((activeEnvironment.variables || []).map((v) => v.variableKey || v.key).filter(Boolean))
+    const regex = /\{\{\s*([\w.-]+)\s*\}\}/g
+    const found = new Set()
+
+    const scan = (str) => {
+      if (!str || typeof str !== 'string') return
+      regex.lastIndex = 0
+      let m
+      while ((m = regex.exec(str)) !== null) {
+        if (!envKeys.has(m[1])) {
+          found.add(m[1])
+        }
+      }
+    }
+
+    scan(url)
+    scan(body)
+    params.forEach((p) => { scan(p.key); scan(p.value) })
+    headers.forEach((h) => { scan(h.key); scan(h.value) })
+
+    return Array.from(found)
+  }, [activeEnvironment, url, body, params, headers])
 
   useEffect(() => {
     if (request) {
@@ -318,15 +412,21 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
       const storedQS = qMark === -1 ? '' : rawUrl.slice(qMark + 1)
       setUrl(baseUrl)
       // Prefer stored queryParams JSON; fall back to QS in url for old records
-      setParams(parseQueryParams(request.queryParams || storedQS || null))
-      setHeaders(parseKV(request.headers))
+      const initialParams = parseQueryParams(request.queryParams || storedQS || null)
+      const initialHeaders = parseKV(request.headers)
+      setParams(initialParams)
+      setHeaders(initialHeaders)
       setBody(request.body || '')
       setResponse(null)
       setSendError(null)
       setSaveError(null)
       savedSnapshotRef.current = {
-        name: request.name || '', method: request.method || 'GET', url: request.url || '',
-        queryParams: request.queryParams || null, headers: request.headers || null, body: request.body || null,
+        name: (request.name || '').trim(),
+        method: request.method || 'GET',
+        url: baseUrl.trim(),
+        queryParams: serializeQueryParams(initialParams),
+        headers: serializeKV(initialHeaders),
+        body: (request.body || '').trim(),
       }
     } else {
       setName('')
@@ -336,9 +436,65 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
       setHeaders([{ key: '', value: '', enabled: true }])
       setBody('')
       setResponse(null)
-      savedSnapshotRef.current = null
+      savedSnapshotRef.current = {
+        name: '',
+        method: 'GET',
+        url: '',
+        queryParams: null,
+        headers: null,
+        body: '',
+      }
     }
+    lastDirtyRef.current = false
+    onDirtyChangeRef.current?.(false)
   }, [request])
+
+  const checkIfDirty = useCallback(() => {
+    const snap = savedSnapshotRef.current
+    if (!snap) return false
+    const curName = name.trim()
+    const curMethod = method
+    const curUrl = url.trim()
+    const curParams = serializeQueryParams(params)
+    const curHeaders = serializeKV(headers)
+    const curBody = bodyMode === 'none' ? '' : body.trim()
+
+    return (
+      curName !== (snap.name || '').trim() ||
+      curMethod !== (snap.method || 'GET') ||
+      curUrl !== (snap.url || '').trim() ||
+      curParams !== (snap.queryParams || null) ||
+      curHeaders !== (snap.headers || null) ||
+      curBody !== (snap.body || '').trim()
+    )
+  }, [name, method, url, params, headers, body, bodyMode])
+
+  useEffect(() => {
+    const dirty = checkIfDirty()
+    if (dirty !== lastDirtyRef.current) {
+      lastDirtyRef.current = dirty
+      onDirtyChangeRef.current?.(dirty)
+    }
+  }, [checkIfDirty])
+
+  // ── Auth → headers/queryParams ─────────────────────────────────────────────
+
+  const applyAuth = (headersObj, paramsArr) => {
+    const h = { ...headersObj }
+    const p = paramsArr.map((r) => ({ ...r }))
+    if (authType === 'bearer' && authBearer.trim()) {
+      h['Authorization'] = `Bearer ${authBearer.trim()}`
+    } else if (authType === 'basic' && authBasicUser.trim()) {
+      h['Authorization'] = 'Basic ' + btoa(`${authBasicUser}:${authBasicPass}`)
+    } else if (authType === 'apikey' && authApiKeyName.trim() && authApiKeyValue.trim()) {
+      if (authApiKeyIn === 'header') {
+        h[authApiKeyName.trim()] = authApiKeyValue.trim()
+      } else {
+        p.push({ key: authApiKeyName.trim(), value: authApiKeyValue.trim(), enabled: true })
+      }
+    }
+    return { h, p }
+  }
 
   // ── Save (returns saved request object) ────────────────────────────────────
 
@@ -354,30 +510,47 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
     if (body.trim() && !Object.keys(headersObj).some((k) => k.toLowerCase() === 'content-type')) {
       headersObj['Content-Type'] = 'application/json'
     }
+    const { h: headersWithAuth, p: paramsWithAuth } = applyAuth(headersObj, params)
+    const finalParams = paramsWithAuth
     const payload = {
       name: name.trim(),
       method,
-      url: fullUrl,
-      headers: Object.keys(headersObj).length ? JSON.stringify(headersObj) : null,
-      queryParams: serializeQueryParams(params),
-      body: body.trim() || null,
+      url: buildFullUrl(url.trim(), finalParams),
+      headers: Object.keys(headersWithAuth).length ? JSON.stringify(headersWithAuth) : null,
+      queryParams: serializeQueryParams(finalParams),
+      body: bodyMode === 'none' ? null : (body.trim() || null),
       folderId: folderId ?? request?.folderId ?? null,
+    }
+
+    const currentSnap = {
+      name: name.trim(),
+      method,
+      url: url.trim(),
+      queryParams: serializeQueryParams(params),
+      headers: serializeKV(headers),
+      body: bodyMode === 'none' ? '' : body.trim(),
     }
 
     if (isEditing) {
       const res = await updateRequestApi(request.id, payload)
       updateRequestInStore(collectionId, request.folderId || null, res.data)
+      savedSnapshotRef.current = currentSnap
+      lastDirtyRef.current = false
+      onDirtyChangeRef.current?.(false)
       onSaved?.(res.data)
-      savedSnapshotRef.current = payload
       return res.data
     } else {
       const res = await createRequestApi(collectionId, payload)
       addRequestToStore(collectionId, res.data)
+      savedSnapshotRef.current = currentSnap
+      lastDirtyRef.current = false
+      onDirtyChangeRef.current?.(false)
       onSaved?.(res.data)
-      savedSnapshotRef.current = payload
       return res.data
     }
-  }, [name, method, url, params, headers, body, collectionId, folderId, request, isEditing,
+  }, [name, method, url, params, headers, body, bodyMode, authType, authBearer,
+      authBasicUser, authBasicPass, authApiKeyName, authApiKeyValue, authApiKeyIn,
+      collectionId, folderId, request, isEditing,
       addRequestToStore, updateRequestInStore, onSaved])
 
   const handleSave = async () => {
@@ -412,6 +585,8 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
           setSending(false)
           return
         }
+        savedRequest = await doSave()
+      } else if (checkIfDirty()) {
         savedRequest = await doSave()
       }
 
@@ -456,6 +631,20 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
     }
   }
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        handleSend()
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        handleSave()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [handleSend, handleSave])
 
   // Load a historical run into the response panel
   const handleSelectHistoryRun = (run) => {
@@ -470,8 +659,84 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
     setActiveRespTab('body')
   }
 
+  // ── AI handlers ────────────────────────────────────────────────────────────
+
+  const handleAiGenerateBody = async () => {
+    if (!aiBodyDesc.trim()) return
+    setAiBodyLoading(true); setAiBodyError(null)
+    try {
+      const res = await generateBodyApi(aiBodyDesc.trim())
+      setBody(typeof res.data.body === 'string' ? res.data.body : JSON.stringify(res.data.body, null, 2))
+    } catch (e) { setAiBodyError(e.response?.data?.message || 'AI request failed') }
+    finally { setAiBodyLoading(false) }
+  }
+
+  const handleAiSuggestHeaders = async () => {
+    setAiHeadersLoading(true); setAiHeadersError(null); setAiHeadersSugg(null)
+    try {
+      const res = await suggestHeadersApi(url, method, body, serializeKV(headers))
+      setAiHeadersSugg(res.data)
+    } catch (e) { setAiHeadersError(e.response?.data?.message || 'AI request failed') }
+    finally { setAiHeadersLoading(false) }
+  }
+
+  const handleAddSuggestedHeader = (name, value) => {
+    setHeaders((prev) => {
+      const next = prev.filter((h) => h.key || h.value)
+      return [...next, { key: name, value, enabled: true }, { key: '', value: '', enabled: true }]
+    })
+  }
+
+  const handleAiExplain = async () => {
+    if (!response) return
+    setAiExplainLoading(true); setAiExplainError(null); setAiExplain(null)
+    try {
+      const res = await explainResponseApi(
+        response.status,
+        response.body || '',
+        JSON.stringify(response.headers || {}),
+      )
+      setAiExplain(res.data)
+    } catch (e) { setAiExplainError(e.response?.data?.message || 'AI request failed') }
+    finally { setAiExplainLoading(false) }
+  }
+
+  const handleAiGenerateDocs = async () => {
+    setAiDocsLoading(true); setAiDocsError(null); setAiDocs(null)
+    try {
+      const statusCode = response?.status >= 100 && response?.status <= 599 ? response.status : undefined
+      const res = await generateDocsApi(
+        url, method, serializeKV(headers), body,
+        statusCode, response?.body || '',
+      )
+      setAiDocs(res.data.documentation)
+    } catch (e) { setAiDocsError(e.response?.data?.message || 'AI request failed') }
+    finally { setAiDocsLoading(false) }
+  }
+
+  const handleAiGenerateTests = async () => {
+    setAiTestsLoading(true); setAiTestsError(null); setAiTests(null)
+    try {
+      const statusCode = response?.status >= 100 && response?.status <= 599 ? response.status : undefined
+      const res = await generateTestsApi(url, method, body, statusCode, response?.body || '')
+      setAiTests(res.data.testCases || [])
+    } catch (e) { setAiTestsError(e.response?.data?.message || 'AI request failed') }
+    finally { setAiTestsLoading(false) }
+  }
+
   const paramCount  = params.filter((p) => p.enabled && p.key).length
   const headerCount = headers.filter((h) => h.enabled && h.key).length
+
+  const formattedResponseBody = useMemo(() => {
+    const b = response?.body
+    if (b == null) return null
+    if (respRaw || b.length > 200 * 1024) return respRaw ? b : tryFormatJSON(b)
+    try {
+      return tokenizeJSON(JSON.stringify(JSON.parse(b), null, 2))
+    } catch {
+      return b
+    }
+  }, [response?.body, respRaw])
 
   return (
     <div className="request-builder">
@@ -493,7 +758,19 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
         <button className="btn-sm btn-sm-primary" onClick={handleSave} disabled={saving} type="button">
           {saving ? 'Saving' : saved ? 'Saved' : isEditing ? 'Save' : 'Save to Collection'}
         </button>
+        <button className="btn-sm btn-sm-ghost" onClick={() => setShowCode(true)} type="button" title="Generate code snippet">
+          {'</>'}
+        </button>
       </div>
+
+      {showCode && (
+        <CodeModal
+          url={url} method={method}
+          headers={serializeKV(headers)}
+          body={bodyMode !== 'none' ? body : null}
+          onClose={() => setShowCode(false)}
+        />
+      )}
 
       {saveError && (
         <div style={{ padding: '0 16px 4px' }}>
@@ -552,12 +829,27 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
         </button>
       </div>
 
+      {undefinedVars.length > 0 && (
+        <div style={{
+          padding: '4px 16px',
+          fontSize: '11.5px',
+          color: 'var(--warning)',
+          background: 'var(--bg-panel)',
+          borderBottom: '1px solid var(--border)',
+        }}>
+          Undefined variable(s): {undefinedVars.join(', ')}
+        </div>
+      )}
+
       {/* ── Request tabs ── */}
       <div className="tabs" role="tablist">
         {[
           { id: 'params',  label: 'Params',  count: paramCount },
           { id: 'headers', label: 'Headers', count: headerCount },
-          { id: 'body',    label: 'Body',    count: body.trim() ? 1 : 0 },
+          { id: 'auth',    label: 'Auth',    count: authType !== 'none' ? 1 : 0 },
+          { id: 'body',    label: 'Body',    count: bodyMode !== 'none' && body.trim() ? 1 : 0 },
+          { id: 'docs',    label: 'Docs',    count: 0 },
+          { id: 'tests',   label: 'Tests',   count: 0 },
         ].map(({ id, label, count }) => (
           <button
             key={id}
@@ -577,21 +869,188 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
           <KVTable pairs={params} onChange={setParams} keyPlaceholder="param" valuePlaceholder="value" />
         )}
         {activeTab === 'headers' && (
-          <KVTable pairs={headers} onChange={setHeaders} keyPlaceholder="Header" valuePlaceholder="value" />
+          <>
+            <KVTable pairs={headers} onChange={setHeaders} keyPlaceholder="Header" valuePlaceholder="value" />
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button className="btn-sm btn-sm-ghost" onClick={handleAiSuggestHeaders} disabled={aiHeadersLoading}>
+                {aiHeadersLoading ? 'Loading…' : 'Suggest headers'}
+              </button>
+              {aiHeadersError && <span style={{ fontSize: 12, color: 'var(--error)' }}>{aiHeadersError}</span>}
+            </div>
+            {aiHeadersSuggestions && (
+              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {aiHeadersSuggestions.authenticationSuggestion && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    Auth: {aiHeadersSuggestions.authenticationSuggestion}
+                  </div>
+                )}
+                {aiHeadersSuggestions.explanation && (
+                  <div style={{ fontSize: 12, color: 'var(--text-subtle)' }}>{aiHeadersSuggestions.explanation}</div>
+                )}
+                {(aiHeadersSuggestions.headers || []).map((h, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                    <code style={{ color: 'var(--text-primary)', fontFamily: 'var(--mono)' }}>{h.name}: {h.value}</code>
+                    <span style={{ color: 'var(--text-subtle)', flex: 1 }}>{h.reason}</span>
+                    <button className="btn-sm btn-sm-ghost" style={{ height: 22, fontSize: 11, padding: '0 7px' }}
+                      onClick={() => handleAddSuggestedHeader(h.name, h.value)}>
+                      Add
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        {activeTab === 'auth' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="field">
+              <label className="field-label">Type</label>
+              <select className="field-select" value={authType} onChange={(e) => setAuthType(e.target.value)}>
+                <option value="none">None</option>
+                <option value="bearer">Bearer Token</option>
+                <option value="basic">Basic Auth</option>
+                <option value="apikey">API Key</option>
+              </select>
+            </div>
+            {authType === 'bearer' && (
+              <div className="field">
+                <label className="field-label">Token</label>
+                <input className="field-input" placeholder="eyJ..." value={authBearer} onChange={(e) => setAuthBearer(e.target.value)} />
+              </div>
+            )}
+            {authType === 'basic' && (
+              <>
+                <div className="field">
+                  <label className="field-label">Username</label>
+                  <input className="field-input" value={authBasicUser} onChange={(e) => setAuthBasicUser(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label className="field-label">Password</label>
+                  <input className="field-input" type="password" value={authBasicPass} onChange={(e) => setAuthBasicPass(e.target.value)} />
+                </div>
+              </>
+            )}
+            {authType === 'apikey' && (
+              <>
+                <div className="field">
+                  <label className="field-label">Key name</label>
+                  <input className="field-input" value={authApiKeyName} onChange={(e) => setAuthApiKeyName(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label className="field-label">Value</label>
+                  <input className="field-input" value={authApiKeyValue} onChange={(e) => setAuthApiKeyValue(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label className="field-label">Add to</label>
+                  <select className="field-select" value={authApiKeyIn} onChange={(e) => setAuthApiKeyIn(e.target.value)}>
+                    <option value="header">Header</option>
+                    <option value="query">Query param</option>
+                  </select>
+                </div>
+              </>
+            )}
+            {authType !== 'none' && (
+              <div style={{ fontSize: 11, color: 'var(--text-subtle)' }}>
+                Applied to headers/params on Save and Send.
+              </div>
+            )}
+          </div>
         )}
         {activeTab === 'body' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-subtle)' }}>
-              Raw body — JSON, form data, or any format your endpoint expects.
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {['none','json','text'].map((m) => (
+                <button key={m} className={`btn-sm ${bodyMode === m ? 'btn-sm-primary' : 'btn-sm-ghost'}`}
+                  style={{ height: 22, fontSize: 11, padding: '0 8px' }}
+                  onClick={() => setBodyMode(m)}>
+                  {m === 'none' ? 'None' : m === 'json' ? 'Raw JSON' : 'Raw Text'}
+                </button>
+              ))}
+              {bodyMode !== 'none' && body.trim() && (
+                <button className="btn-sm btn-sm-ghost" style={{ height: 22, fontSize: 11, padding: '0 8px' }}
+                  onClick={() => { try { setBody(JSON.stringify(JSON.parse(body), null, 2)) } catch {} }}>
+                  Beautify
+                </button>
+              )}
             </div>
-            <textarea
-              className="body-editor"
-              placeholder={'{\n  "key": "value"\n}'}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              spellCheck={false}
-              aria-label="Request body"
-            />
+            {bodyMode !== 'none' && (
+              <textarea
+                className="body-editor"
+                placeholder={bodyMode === 'json' ? '{\n  "key": "value"\n}' : 'Plain text body'}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                spellCheck={false}
+                aria-label="Request body"
+              />
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                className="field-input"
+                style={{ flex: 1, height: 28, fontSize: 12 }}
+                placeholder="Describe what to generate…"
+                value={aiBodyDesc}
+                onChange={(e) => setAiBodyDesc(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAiGenerateBody() }}
+              />
+              <button className="btn-sm btn-sm-ghost" onClick={handleAiGenerateBody} disabled={aiBodyLoading || !aiBodyDesc.trim()}>
+                {aiBodyLoading ? 'Loading…' : 'Generate with AI'}
+              </button>
+              {aiBodyError && <span style={{ fontSize: 12, color: 'var(--error)' }}>{aiBodyError}</span>}
+            </div>
+          </div>
+        )}
+        {activeTab === 'docs' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button className="btn-sm btn-sm-ghost" style={{ alignSelf: 'flex-start' }}
+              onClick={handleAiGenerateDocs} disabled={aiDocsLoading}>
+              {aiDocsLoading ? 'Loading…' : 'Generate docs'}
+            </button>
+            {aiDocsError && <div className="alert alert-error" style={{ fontSize: 12 }}>{aiDocsError}</div>}
+            {aiDocs && (
+              <div style={{ position: 'relative' }}>
+                <pre style={{
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.6,
+                  color: 'var(--text-secondary)', background: 'var(--bg-void)',
+                  border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                  padding: 12, margin: 0,
+                }}>
+                  {aiDocs}
+                </pre>
+                <button className="btn-sm btn-sm-ghost" style={{ position: 'absolute', top: 8, right: 8, fontSize: 11 }}
+                  onClick={() => navigator.clipboard.writeText(aiDocs)}>
+                  Copy
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'tests' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button className="btn-sm btn-sm-ghost" style={{ alignSelf: 'flex-start' }}
+              onClick={handleAiGenerateTests} disabled={aiTestsLoading}>
+              {aiTestsLoading ? 'Loading…' : 'Generate test cases'}
+            </button>
+            {aiTestsError && <div className="alert alert-error" style={{ fontSize: 12 }}>{aiTestsError}</div>}
+            {aiTests && aiTests.length === 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No test cases returned.</div>
+            )}
+            {aiTests && aiTests.map((t, i) => (
+              <div key={i} style={{
+                padding: '10px 12px', background: 'var(--bg-panel)',
+                border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+              }}>
+                <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)', marginBottom: 4 }}>
+                  {t.name}
+                  <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 400, color: 'var(--text-subtle)',
+                    background: 'var(--bg-input)', padding: '1px 6px', borderRadius: 'var(--radius-xs)' }}>
+                    {t.testType}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>{t.description}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-subtle)' }}>Expected: {t.expectedResult}</div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -640,6 +1099,26 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
                   <span style={{ color: 'var(--text-primary)' }}>{formatBytes(response.size)}</span>
                 </span>
               )}
+              {response.body != null && (
+                <>
+                  <button className="btn-sm btn-sm-ghost" style={{ fontSize: 10, height: 22, padding: '0 7px' }}
+                    onClick={() => setRespRaw((r) => !r)}>
+                    {respRaw ? 'Pretty' : 'Raw'}
+                  </button>
+                  <button className="btn-sm btn-sm-ghost" style={{ fontSize: 10, height: 22, padding: '0 7px' }}
+                    onClick={() => navigator.clipboard.writeText(response.body)}>
+                    Copy
+                  </button>
+                  <button className="btn-sm btn-sm-ghost" style={{ fontSize: 10, height: 22, padding: '0 7px' }}
+                    onClick={() => {
+                      const blob = new Blob([response.body], { type: 'text/plain' })
+                      const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+                      a.download = 'response.txt'; a.click(); URL.revokeObjectURL(a.href)
+                    }}>
+                    Download
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -662,7 +1141,32 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
 
         {response && activeRespTab === 'body' && (
           <div className="response-body" aria-live="polite">
-            {response.body ?? <span style={{ color: 'var(--text-subtle)', fontStyle: 'italic' }}>Empty body</span>}
+            {formattedResponseBody != null
+              ? formattedResponseBody
+              : <span style={{ color: 'var(--text-subtle)', fontStyle: 'italic' }}>Empty body</span>}
+          </div>
+        )}
+
+        {response && activeRespTab === 'body' && (
+          <div style={{ padding: '6px 12px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <button className="btn-sm btn-sm-ghost" style={{ fontSize: 11 }}
+              onClick={handleAiExplain} disabled={aiExplainLoading}>
+              {aiExplainLoading ? 'Loading…' : 'Explain'}
+            </button>
+            {aiExplainError && <span style={{ fontSize: 11, color: 'var(--error)' }}>{aiExplainError}</span>}
+            {aiExplain && (
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                title={aiExplain.explanation}>
+                {aiExplain.explanation}
+              </span>
+            )}
+          </div>
+        )}
+
+        {aiExplain && activeRespTab === 'body' && (aiExplain.possibleCause || (aiExplain.suggestedFixes?.length > 0)) && (
+          <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>
+            {aiExplain.possibleCause && <div><strong>Cause:</strong> {aiExplain.possibleCause}</div>}
+            {aiExplain.suggestedFixes?.map((f, i) => <div key={i}>• {f}</div>)}
           </div>
         )}
 

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ToastProvider, Toast } from './context/ToastContext'
 import { SettingsProvider } from './context/SettingsContext'
 import SettingsDrawer from './components/SettingsDrawer'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -19,8 +20,10 @@ import SettingsPage   from './pages/SettingsPage'
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <SettingsProvider>
+      <ToastProvider>
+        <Toast />
+        <BrowserRouter>
+          <SettingsProvider>
           <SettingsDrawer />
           <Routes>
           {/* Public routes */}
@@ -47,6 +50,7 @@ function App() {
         </Routes>
         </SettingsProvider>
       </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }

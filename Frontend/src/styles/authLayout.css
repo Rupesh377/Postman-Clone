@@ -30,14 +30,14 @@
 .auth-brand-name {
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   letter-spacing: -0.4px;
 }
 
 .auth-tagline {
   font-size: 26px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   line-height: 1.2;
   margin-bottom: 14px;
   letter-spacing: -0.5px;
@@ -45,7 +45,7 @@
 
 .auth-desc {
   font-size: 14px;
-  color: rgba(255,255,255,0.45);
+  color: var(--text-muted);
   line-height: 1.65;
   margin-bottom: 32px;
   max-width: 320px;
@@ -62,7 +62,7 @@
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   line-height: 1.4;
 }
 
