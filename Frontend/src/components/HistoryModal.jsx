@@ -23,15 +23,18 @@ export default function HistoryModal({ onClose }) {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
 
+  const [copiedId, setCopiedId] = useState(null)
+
   const load = useCallback(async (p) => {
     setLoading(true)
     setError(null)
     try {
       const res = await getHistoryApi(p)
       const data = res.data
-      setRows((prev) => p === 0 ? data.content : [...prev, ...data.content])
-      setTotal(data.totalPages)
-      setPage(data.number)
+      const items = Array.isArray(data) ? data : (Array.isArray(data?.content) ? data.content : [])
+      setRows((prev) => p === 0 ? items : [...prev, ...items])
+      setTotal(data?.totalPages || 1)
+      setPage(data?.number || 0)
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to load history')
     } finally {
@@ -130,8 +133,34 @@ export default function HistoryModal({ onClose }) {
 
               <button
                 className="btn-icon"
+                style={{ color: copiedId === r.id ? 'var(--orange)' : 'var(--text-subtle)', flexShrink: 0 }}
+                title="Copy URL"
+                aria-label="Copy URL"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(r.url)
+                    setCopiedId(r.id)
+                    setTimeout(() => setCopiedId(null), 1500)
+                  } catch {}
+                }}
+              >
+                {copiedId === r.id ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                )}
+              </button>
+
+              <button
+                className="btn-icon"
                 style={{ color: 'var(--text-subtle)', flexShrink: 0 }}
                 title="Delete"
+                aria-label="Delete history entry"
                 onClick={() => handleDelete(r.id)}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

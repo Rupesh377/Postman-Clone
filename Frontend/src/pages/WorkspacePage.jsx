@@ -255,7 +255,8 @@ function NoRequestSelected({ onNew }) {
 function WorkspaceContent({ workspace, onWorkspaceSaved }) {
   const { collections, loadCollections } = useWorkspace()
 
-  const [sidebarCollapsed, setSidebar] = useState(false)
+  const toast = useToast()
+  const [sidebarCollapsed, setSidebar] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900)
   const [openTabs, setOpenTabs]         = useState([])
   const [activeTabId, setActiveTabId]   = useState(null)
   const [showMembers, setShowMembers]   = useState(false)
@@ -283,6 +284,9 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
       }
       setOpenTabs((prev) => [...prev, newTab])
       setActiveTabId(tabId)
+    }
+    if (typeof window !== 'undefined' && window.innerWidth <= 900) {
+      setSidebar(true)
     }
   }
 
@@ -404,6 +408,7 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
               })
               onWorkspaceSaved(res.data)
             } catch {
+              toast.error('Failed to rename workspace')
             }
           }}
           onMenuToggle={() => setSidebar((c) => !c)}

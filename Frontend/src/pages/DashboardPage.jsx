@@ -295,7 +295,7 @@ export default function DashboardPage() {
                 onClick={() => openWorkspace(ws.id)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') openWorkspace(ws.id) }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openWorkspace(ws.id) } }}
                 aria-label={`Open workspace ${ws.name}`}
               >
                 {/* Top: icon + visibility + actions */}

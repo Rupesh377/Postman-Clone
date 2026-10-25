@@ -22,17 +22,42 @@ function buildFetch(method, url, headers, body) {
 }
 
 export default function CodeModal({ url, method, headers, body, onClose }) {
-  const [tab, setTab] = useState('curl')
+  const [copied, setCopied] = useState(false)
   const snippet = tab === 'curl'
     ? buildCurl(method, url, headers, body)
     : buildFetch(method, url, headers, body)
+
+  const handleCopy = async () => {
+    let ok = false
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(snippet)
+        ok = true
+      }
+    } catch {}
+    if (!ok) {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = snippet
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        ok = true
+      } catch {}
+    }
+    if (ok) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
 
   return (
     <Modal title="Code snippet" onClose={onClose} wide>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         {['curl', 'fetch'].map((t) => (
           <button key={t} className={`btn-sm ${tab === t ? 'btn-sm-primary' : 'btn-sm-ghost'}`}
-            style={{ height: 24, fontSize: 11 }} onClick={() => setTab(t)}>
+            style={{ height: 24, fontSize: 11 }} onClick={() => { setTab(t); setCopied(false) }}>
             {t === 'curl' ? 'cURL' : 'fetch (JS)'}
           </button>
         ))}
@@ -49,8 +74,8 @@ export default function CodeModal({ url, method, headers, body, onClose }) {
         </pre>
         <button className="btn-sm btn-sm-ghost"
           style={{ position: 'absolute', top: 8, right: 8, fontSize: 11 }}
-          onClick={() => navigator.clipboard.writeText(snippet)}>
-          Copy
+          onClick={handleCopy}>
+          {copied ? '✓ Copied!' : 'Copy'}
         </button>
       </div>
     </Modal>

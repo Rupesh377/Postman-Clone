@@ -12,12 +12,28 @@ export default function OAuthSuccessPage() {
     const refreshToken = searchParams.get('refreshToken')
 
     if (accessToken && refreshToken) {
-      login({ accessToken, refreshToken, user: null })
+      let userObj = { name: 'User', email: '' }
+      try {
+        const payloadBase64 = accessToken.split('.')[1]
+        if (payloadBase64) {
+          const jsonStr = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'))
+          const payload = JSON.parse(jsonStr)
+          userObj = {
+            id: payload.userId || payload.id || null,
+            name: payload.name || payload.fullName || payload.sub?.split('@')[0] || 'User',
+            email: payload.email || payload.sub || '',
+          }
+        }
+      } catch {
+        // Fallback to default user object
+      }
+
+      login({ accessToken, refreshToken, user: userObj })
       navigate('/dashboard', { replace: true })
     } else {
       navigate('/login?error=oauth_failed', { replace: true })
     }
-  }, [])
+  }, [searchParams, navigate, login])
 
   return (
     <div style={{

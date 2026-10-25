@@ -225,7 +225,7 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
   )
 }
 
-function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection, onNewRequest, onDuplicateRequest, onRenameRequest, onRequestDeleted, onFolderDeleted, onRunCollection }) {
+function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection, onNewRequest, onDuplicateRequest, onRenameRequest, onRequestDeleted, onFolderDeleted, onRunCollection, onExportCollection }) {
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [showAddFolder, setShowAddFolder] = useState(false)
@@ -331,6 +331,12 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
               </button>
               <button
                 className="tree-add-menu-item"
+                onClick={(e) => { e.stopPropagation(); setShowMenu(false); onExportCollection?.(collection) }}
+              >
+                Export
+              </button>
+              <button
+                className="tree-add-menu-item"
                 onClick={(e) => { e.stopPropagation(); setShowMenu(false); setOpen(true); onNewRequest(collection.id, null) }}
               >
                 New Request
@@ -420,7 +426,7 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
 
-  const { collections, loading, error, loadCollections, addCollection, removeCollection, addRequestToStore, addFolder } = useWorkspace()
+  const { collections, loading, error, loadCollections, addCollection, removeCollection, addRequestToStore, addRequestToFolderStore, addFolder } = useWorkspace()
 
   useEffect(() => { loadCollections() }, [loadCollections])
 
@@ -439,7 +445,11 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
         body: request.body,
         folderId: request.folderId || null,
       })
-      addRequestToStore(collectionId, res.data)
+      if (request.folderId) {
+        addRequestToFolderStore(request.folderId, res.data)
+      } else {
+        addRequestToStore(collectionId, res.data)
+      }
     } catch { toast.error('Failed to duplicate request') }
   }
 
@@ -562,6 +572,7 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
               onRequestDeleted={onRequestDeleted}
               onFolderDeleted={onFolderDeleted}
               onRunCollection={(c) => setRunnerCollection(c)}
+              onExportCollection={(c) => { setExportTarget(c); setShowImportExport(true) }}
             />
           ))}
         </div>

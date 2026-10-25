@@ -32,10 +32,19 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      const isAuthEndpoint = originalRequest.url?.includes('/api/v1/auth/')
+      if (isAuthEndpoint) {
+        return Promise.reject(error)
+      }
+
       const refreshToken = localStorage.getItem('refreshToken')
       if (!refreshToken) {
-        localStorage.clear()
-        window.location.href = '/login'
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
         return Promise.reject(error)
       }
 
@@ -62,8 +71,12 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError, null)
-        localStorage.clear()
-        window.location.href = '/login'
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false

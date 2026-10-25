@@ -319,8 +319,11 @@ function HistoryPanel({ requestId, onSelectRun }) {
 // ── RequestBuilder ────────────────────────────────────────────────────────────
 
 export default function RequestBuilder({ request, collectionId, folderId, onSaved, onNew, onDirtyChange }) {
-  const { addRequestToStore, updateRequestInStore } = useWorkspace()
+  const { addRequestToStore, addRequestToFolderStore, updateRequestInStore } = useWorkspace()
   const { activeEnvironment, environments, createEnvironment, selectEnvironment, loadEnvironments, envsLoaded } = useEnvironment()
+
+  const [copiedBody, setCopiedBody] = useState(false)
+  const [copiedDocs, setCopiedDocs] = useState(false)
 
   const [name, setName] = useState('')
   const [method, setMethod] = useState('GET')
@@ -541,7 +544,11 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
       return res.data
     } else {
       const res = await createRequestApi(collectionId, payload)
-      addRequestToStore(collectionId, res.data)
+      if (folderId) {
+        addRequestToFolderStore(folderId, res.data)
+      } else {
+        addRequestToStore(collectionId, res.data)
+      }
       savedSnapshotRef.current = currentSnap
       lastDirtyRef.current = false
       onDirtyChangeRef.current?.(false)
@@ -551,7 +558,7 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
   }, [name, method, url, params, headers, body, bodyMode, authType, authBearer,
       authBasicUser, authBasicPass, authApiKeyName, authApiKeyValue, authApiKeyIn,
       collectionId, folderId, request, isEditing,
-      addRequestToStore, updateRequestInStore, onSaved])
+      addRequestToStore, addRequestToFolderStore, updateRequestInStore, onSaved])
 
   const handleSave = async () => {
     setSaving(true)
@@ -631,20 +638,25 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
     }
   }
 
+  const handleSendRef = useRef(handleSend)
+  handleSendRef.current = handleSend
+  const handleSaveRef = useRef(handleSave)
+  handleSaveRef.current = handleSave
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault()
-        handleSend()
+        handleSendRef.current()
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
-        handleSave()
+        handleSaveRef.current()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [handleSend, handleSave])
+  }, [])
 
   // Load a historical run into the response panel
   const handleSelectHistoryRun = (run) => {
@@ -1018,8 +1030,19 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
                   {aiDocs}
                 </pre>
                 <button className="btn-sm btn-sm-ghost" style={{ position: 'absolute', top: 8, right: 8, fontSize: 11 }}
-                  onClick={() => navigator.clipboard.writeText(aiDocs)}>
-                  Copy
+                  onClick={async () => {
+                    let ok = false
+                    try {
+                      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(aiDocs); ok = true }
+                    } catch {}
+                    if (!ok) {
+                      try {
+                        const ta = document.createElement('textarea'); ta.value = aiDocs; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok = true
+                      } catch {}
+                    }
+                    if (ok) { setCopiedDocs(true); setTimeout(() => setCopiedDocs(false), 2000) }
+                  }}>
+                  {copiedDocs ? '✓ Copied!' : 'Copy'}
                 </button>
               </div>
             )}
@@ -1106,8 +1129,19 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
                     {respRaw ? 'Pretty' : 'Raw'}
                   </button>
                   <button className="btn-sm btn-sm-ghost" style={{ fontSize: 10, height: 22, padding: '0 7px' }}
-                    onClick={() => navigator.clipboard.writeText(response.body)}>
-                    Copy
+                    onClick={async () => {
+                      let ok = false
+                      try {
+                        if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(response.body); ok = true }
+                      } catch {}
+                      if (!ok) {
+                        try {
+                          const ta = document.createElement('textarea'); ta.value = response.body; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok = true
+                        } catch {}
+                      }
+                      if (ok) { setCopiedBody(true); setTimeout(() => setCopiedBody(false), 2000) }
+                    }}>
+                    {copiedBody ? '✓ Copied!' : 'Copy'}
                   </button>
                   <button className="btn-sm btn-sm-ghost" style={{ fontSize: 10, height: 22, padding: '0 7px' }}
                     onClick={() => {
