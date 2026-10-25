@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useWorkspace } from '../context/WorkspaceContext'
-import { deleteRequestApi } from '../api/requestApi'
+import { useToast } from '../context/ToastContext'
+import { deleteRequestApi, createRequestApi, updateRequestApi } from '../api/requestApi'
 import { updateCollectionApi, updateFolderApi } from '../api/collectionApi'
 import Modal from './Modal'
+import ExportImportModal from './ExportImportModal'
+import RunnerModal from './RunnerModal'
 import '../styles/app.css'
 
 const FolderIcon = ({ open }) => (
@@ -53,7 +56,19 @@ function MethodBadge({ method }) {
   return <span className={`method-badge method-${method}`}>{method}</span>
 }
 
-function RequestItem({ request, active, onSelect, onDelete }) {
+function RequestItem({ request, active, onSelect, onDelete, onDuplicate, onRename }) {
+  const [renaming, setRenaming] = useState(false)
+  const [renameVal, setRenameVal] = useState(request.name || '')
+  const inputRef = useRef(null)
+
+  const startRename = (e) => { e.stopPropagation(); setRenameVal(request.name || ''); setRenaming(true); setTimeout(() => inputRef.current?.select(), 0) }
+  const commitRename = () => {
+    setRenaming(false)
+    const t = renameVal.trim()
+    if (t && t !== request.name) onRename(request, t)
+    else setRenameVal(request.name || '')
+  }
+
   return (
     <div
       className={`tree-item ${active ? 'active' : ''}`}
@@ -61,8 +76,32 @@ function RequestItem({ request, active, onSelect, onDelete }) {
       title={request.name || request.url}
     >
       <MethodBadge method={request.method} />
-      <span className="tree-item-label">{request.name || request.url || 'Untitled'}</span>
+      {renaming ? (
+        <input
+          ref={inputRef}
+          className="tree-inline-edit"
+          value={renameVal}
+          onChange={(e) => setRenameVal(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { setRenaming(false); setRenameVal(request.name || '') } }}
+          onClick={(e) => e.stopPropagation()}
+          maxLength={100}
+        />
+      ) : (
+        <span className="tree-item-label">{request.name || request.url || 'Untitled'}</span>
+      )}
       <div className="tree-item-actions">
+        <button className="tree-item-action-btn" title="Rename" onClick={startRename} aria-label="Rename request">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+        <button className="tree-item-action-btn" title="Duplicate" onClick={(e) => { e.stopPropagation(); onDuplicate(request) }} aria-label="Duplicate request">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+        </button>
         <button
           className="tree-item-action-btn danger"
           title="Delete request"
@@ -118,7 +157,7 @@ function InlineEdit({ value, onSave, className }) {
   )
 }
 
-function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, onDeleteFolder, onDeleteRequest, onRenameFolder, onNewRequest }) {
+function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, onDeleteFolder, onDeleteRequest, onRenameFolder, onNewRequest, onDuplicateRequest, onRenameRequest }) {
   const [open, setOpen] = useState(false)
   const { requests, loadRequestsForFolder } = useWorkspace()
   const key = `fold_${folder.id}`
@@ -176,6 +215,8 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
               active={activeRequestId === req.id}
               onSelect={onSelectRequest}
               onDelete={(r) => onDeleteRequest(r, collectionId, folder.id)}
+              onDuplicate={(r) => onDuplicateRequest(r, collectionId)}
+              onRename={onRenameRequest}
             />
           ))}
         </div>
@@ -184,7 +225,8 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
   )
 }
 
-function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection, onNewRequest }) {
+function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection, onNewRequest, onDuplicateRequest, onRenameRequest, onRequestDeleted, onFolderDeleted, onRunCollection, onExportCollection }) {
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   const [showAddFolder, setShowAddFolder] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -230,8 +272,9 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
     if (!window.confirm(`Delete folder "${folder.name}" and its requests?`)) return
     try {
       await removeFolder(collection.id, folder.id)
+      onFolderDeleted?.(folder.id)
     } catch {
-      alert('Failed to delete folder')
+      toast.error('Failed to delete folder')
     }
   }
 
@@ -240,7 +283,7 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
       await updateFolderApi(folder.id, { name: newName, description: folder.description })
       loadFolders(collection.id)
     } catch {
-      alert('Failed to rename folder')
+      toast.error('Failed to rename folder')
     }
   }
 
@@ -249,8 +292,9 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
     try {
       await deleteRequestApi(request.id)
       removeRequestFromStore(colId, folderId, request.id)
+      onRequestDeleted?.(request.id)
     } catch {
-      alert('Failed to delete request')
+      toast.error('Failed to delete request')
     }
   }
 
@@ -279,6 +323,18 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
               className="tree-add-menu"
               onMouseLeave={() => setShowMenu(false)}
             >
+              <button
+                className="tree-add-menu-item"
+                onClick={(e) => { e.stopPropagation(); setShowMenu(false); onRunCollection?.(collection) }}
+              >
+                Run
+              </button>
+              <button
+                className="tree-add-menu-item"
+                onClick={(e) => { e.stopPropagation(); setShowMenu(false); onExportCollection?.(collection) }}
+              >
+                Export
+              </button>
               <button
                 className="tree-add-menu-item"
                 onClick={(e) => { e.stopPropagation(); setShowMenu(false); setOpen(true); onNewRequest(collection.id, null) }}
@@ -318,6 +374,8 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
               onRenameFolder={handleRenameFolder}
               onDeleteRequest={handleDeleteRequest}
               onNewRequest={onNewRequest}
+              onDuplicateRequest={onDuplicateRequest}
+              onRenameRequest={onRenameRequest}
             />
           ))}
 
@@ -328,6 +386,8 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
               active={activeRequestId === req.id}
               onSelect={onSelectRequest}
               onDelete={(r) => handleDeleteRequest(r, collection.id, null)}
+              onDuplicate={(r) => onDuplicateRequest(r, collection.id)}
+              onRename={onRenameRequest}
             />
           ))}
 
@@ -358,17 +418,52 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
   )
 }
 
-export default function Sidebar({ workspace, onSelectRequest, activeRequestId, collapsed, onNewRequest }) {
+export default function Sidebar({ workspace, onSelectRequest, activeRequestId, collapsed, onNewRequest, onRequestDeleted, onRequestRenamed, onCollectionDeleted, onFolderDeleted }) {
+  const toast = useToast()
   const [showAddCollection, setShowAddCollection] = useState(false)
   const [collectionName, setCollectionName] = useState('')
   const [collectionDesc, setCollectionDesc] = useState('')
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
 
-  const { collections, loading, error, loadCollections, addCollection, removeCollection } = useWorkspace()
+  const { collections, loading, error, loadCollections, addCollection, removeCollection, addRequestToStore, addRequestToFolderStore, addFolder } = useWorkspace()
 
-  useEffect(() => {
-    loadCollections()
-  }, [loadCollections])
+  useEffect(() => { loadCollections() }, [loadCollections])
+
+  const [showImportExport, setShowImportExport] = useState(false)
+  const [exportTarget, setExportTarget] = useState(null)
+  const [runnerCollection, setRunnerCollection] = useState(null)
+
+  const handleDuplicateRequest = async (request, collectionId) => {
+    try {
+      const res = await createRequestApi(collectionId, {
+        name: `${request.name} (copy)`,
+        method: request.method,
+        url: request.url,
+        headers: request.headers,
+        queryParams: request.queryParams,
+        body: request.body,
+        folderId: request.folderId || null,
+      })
+      if (request.folderId) {
+        addRequestToFolderStore(request.folderId, res.data)
+      } else {
+        addRequestToStore(collectionId, res.data)
+      }
+    } catch { toast.error('Failed to duplicate request') }
+  }
+
+  const handleRenameRequest = async (request, newName) => {
+    try {
+      const res = await updateRequestApi(request.id, {
+        name: newName, method: request.method, url: request.url,
+        headers: request.headers, queryParams: request.queryParams,
+        body: request.body, folderId: request.folderId || null,
+      })
+      loadCollections()
+      onRequestRenamed?.(res.data || { ...request, name: newName })
+    } catch { toast.error('Failed to rename request') }
+  }
 
   const handleAddCollection = async (e) => {
     e.preventDefault()
@@ -380,7 +475,7 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
       setCollectionDesc('')
       setShowAddCollection(false)
     } catch {
-      alert('Failed to create collection')
+      toast.error('Failed to create collection')
     } finally {
       setSaving(false)
     }
@@ -390,8 +485,9 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
     if (!window.confirm(`Delete "${collection.name}" and all its folders and requests? This cannot be undone.`)) return
     try {
       await removeCollection(collection.id)
+      onCollectionDeleted?.(collection.id)
     } catch {
-      alert('Failed to delete collection')
+      toast.error('Failed to delete collection')
     }
   }
 
@@ -400,7 +496,7 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
       await updateCollectionApi(collection.id, { name: newName, description: collection.description })
       loadCollections()
     } catch {
-      alert('Failed to rename collection')
+      toast.error('Failed to rename collection')
     }
   }
 
@@ -410,20 +506,42 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
         <div className="sidebar-workspace-name-label">
           {workspace?.name || 'Workspace'}
         </div>
+        <input
+          className="kv-input"
+          style={{ marginTop: 6, width: '100%', height: 26, fontSize: 12 }}
+          placeholder="Search…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search collections and requests"
+        />
       </div>
 
       <nav className="sidebar-nav" aria-label="Collections">
         <div className="tree-section">
           <div className="tree-section-header">
             <span className="tree-section-label">Collections</span>
-            <button
-              className="tree-add-btn"
-              onClick={() => setShowAddCollection(true)}
-              title="New collection"
-              aria-label="Add collection"
-            >
-              <PlusIcon />
-            </button>
+            <div style={{ display: 'flex', gap: 2 }}>
+              <button
+                className="tree-add-btn"
+                onClick={() => { setExportTarget(null); setShowImportExport(true) }}
+                title="Import collection"
+                aria-label="Import collection"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+              <button
+                className="tree-add-btn"
+                onClick={() => setShowAddCollection(true)}
+                title="New collection"
+                aria-label="Add collection"
+              >
+                <PlusIcon />
+              </button>
+            </div>
           </div>
 
           {loading && (
@@ -438,7 +556,9 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
             </div>
           )}
 
-          {collections.map((col) => (
+          {collections
+            .filter((c) => !search.trim() || c.name.toLowerCase().includes(search.toLowerCase()))
+            .map((col) => (
             <CollectionNode
               key={col.id}
               collection={col}
@@ -447,6 +567,12 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
               onDeleteCollection={handleDeleteCollection}
               onRenameCollection={handleRenameCollection}
               onNewRequest={onNewRequest}
+              onDuplicateRequest={handleDuplicateRequest}
+              onRenameRequest={handleRenameRequest}
+              onRequestDeleted={onRequestDeleted}
+              onFolderDeleted={onFolderDeleted}
+              onRunCollection={(c) => setRunnerCollection(c)}
+              onExportCollection={(c) => { setExportTarget(c); setShowImportExport(true) }}
             />
           ))}
         </div>
@@ -494,6 +620,21 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
             </div>
           </form>
         </Modal>
+      )}
+      {showImportExport && (
+        <ExportImportModal
+          collection={exportTarget}
+          onClose={() => { setShowImportExport(false); setExportTarget(null) }}
+          onImported={() => loadCollections()}
+          addCollection={async (data) => { const r = await addCollection(data); return r }}
+          addFolder={async (colId, data) => { const r = await addFolder(colId, data); return r }}
+        />
+      )}
+      {runnerCollection && (
+        <RunnerModal
+          collection={runnerCollection}
+          onClose={() => setRunnerCollection(null)}
+        />
       )}
     </aside>
   )

@@ -51,6 +51,33 @@
   --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
 }
 
+[data-theme="light"] {
+  --orange-faint:  rgba(255,108,55,0.1);
+  --orange-glow:   rgba(255,108,55,0.2);
+
+  --accent-blue-faint: rgba(15,98,254,0.12);
+
+  --bg-void:    #F6F8FA;
+  --bg-dark:    #FFFFFF;
+  --bg-panel:   #F6F8FA;
+  --bg-card:    #FFFFFF;
+  --bg-input:   #F0F2F5;
+  --bg-hover:   rgba(0,0,0,0.05);
+
+  --border:        #D0D7DE;
+  --border-mid:    #AFB8C1;
+  --border-focus:  #FF6C37;
+
+  --text-primary:   #1F2328;
+  --text-secondary: #424A53;
+  --text-muted:     #656D76;
+  --text-subtle:    #8C959F;
+
+  --error:    #CF222E;
+  --success:  #1A7F37;
+  --warning:  #9A6700;
+}
+
 html, body {
   height: 100%;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

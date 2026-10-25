@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import Topbar from '../components/Topbar'
 import Modal from '../components/Modal'
 import {
@@ -63,6 +64,7 @@ function InlineCardName({ value, onSave }) {
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
 
   const [workspaces, setWorkspaces] = useState([])
@@ -70,6 +72,8 @@ export default function DashboardPage() {
   const [error, setError] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [deleteId, setDeleteId] = useState(null) // id being deleted — for per-card loading state
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
 
   // New workspace form
   const [form, setForm] = useState({ name: '', description: '', visibility: 'PRIVATE' })
@@ -106,7 +110,7 @@ export default function DashboardPage() {
       setWorkspaces((prev) => prev.map((w) => (w.id === ws.id ? res.data : w)))
     } catch (err) {
       const msg = err.response?.data?.message || 'Rename failed'
-      alert(msg)
+      toast.error(msg)
     }
   }
 
@@ -126,12 +130,12 @@ export default function DashboardPage() {
       const status = err.response?.status
       const msg = err.response?.data?.message
       if (status === 403) {
-        alert('You don\'t have permission to delete this workspace.')
+        toast.error('You don\'t have permission to delete this workspace.')
       } else if (status === 404) {
         // Already gone — remove from UI anyway
         setWorkspaces((prev) => prev.filter((w) => w.id !== ws.id))
       } else {
-        alert(msg || `Delete failed (${status ?? 'network error'}). Check the console for details.`)
+        toast.error(msg || `Delete failed (${status ?? 'network error'}). Check the console for details.`)
         console.error('[deleteWorkspace]', err)
       }
     } finally {
@@ -176,6 +180,18 @@ export default function DashboardPage() {
 
   const firstName = user?.name?.split(' ')[0] || 'there'
 
+  const filteredWorkspaces = workspaces
+    .filter((ws) => !search.trim() || ws.name?.toLowerCase().includes(search.trim().toLowerCase()))
+    .sort((a, b) => {
+      if (sortBy === 'oldest') {
+        return new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+      }
+      if (sortBy === 'name') {
+        return (a.name || '').localeCompare(b.name || '')
+      }
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+    })
+
   return (
     <div className="app-shell" style={{ flexDirection: 'column' }}>
       <Topbar />
@@ -191,18 +207,40 @@ export default function DashboardPage() {
                 ? 'Loading…'
                 : workspaces.length === 0
                   ? 'Create a workspace to start organising your API requests.'
-                  : `${workspaces.length} workspace${workspaces.length !== 1 ? 's' : ''} · pick one to open the request builder`}
+                  : `${filteredWorkspaces.length !== workspaces.length ? `${filteredWorkspaces.length} of ` : ''}${workspaces.length} workspace${workspaces.length !== 1 ? 's' : ''} · pick one to open the request builder`}
             </p>
           </div>
-          <button
-            className="btn-sm btn-sm-primary dash-new-btn"
-            onClick={() => setShowModal(true)}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            New workspace
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              className="field-input"
+              style={{ width: 180, height: 30 }}
+              placeholder="Search workspaces…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search workspaces"
+            />
+            <select
+              className="field-select"
+              style={{ width: 'auto', height: 30 }}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              aria-label="Sort workspaces"
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="name">Name A-Z</option>
+            </select>
+            <button
+              className="btn-sm btn-sm-primary dash-new-btn"
+              onClick={() => setShowModal(true)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              New workspace
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -245,14 +283,19 @@ export default function DashboardPage() {
 
         {!loading && workspaces.length > 0 && (
           <div className="dash-grid">
-            {workspaces.map((ws) => (
+            {filteredWorkspaces.length === 0 && (
+              <div style={{ gridColumn: '1 / -1', padding: '16px 0', color: 'var(--text-subtle)', fontSize: 13 }}>
+                No workspaces match "{search}".
+              </div>
+            )}
+            {filteredWorkspaces.map((ws) => (
               <div
                 key={ws.id}
                 className={`workspace-card ${deleteId === ws.id ? 'workspace-card--deleting' : ''}`}
                 onClick={() => openWorkspace(ws.id)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') openWorkspace(ws.id) }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openWorkspace(ws.id) } }}
                 aria-label={`Open workspace ${ws.name}`}
               >
                 {/* Top: icon + visibility + actions */}

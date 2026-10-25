@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useSettings } from '../context/SettingsContext'
 import AppLogo from './AppLogo'
 import NavDrawer from './NavDrawer'
+import HistoryModal from './HistoryModal'
 import { logoutApi } from '../api/authApi'
 import '../styles/app.css'
 
@@ -12,10 +13,12 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
   const { openSettings } = useSettings()
   const navigate = useNavigate()
 
-  const [menuOpen, setMenuOpen]     = useState(false)
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editing, setEditing]       = useState(false)
-  const [editVal, setEditVal]       = useState(title || '')
+  const [menuOpen, setMenuOpen]       = useState(false)
+  const [drawerOpen, setDrawerOpen]   = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [editing, setEditing]         = useState(false)
+  const [editVal, setEditVal]         = useState(title || '')
+  const [theme, setTheme]             = useState(() => document.documentElement.dataset.theme || localStorage.getItem('theme') || 'dark')
 
   const menuRef  = useRef(null)
   const titleRef = useRef(null)
@@ -36,6 +39,13 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
     try { await logoutApi(accessToken) } catch {}
     logout()
     navigate('/login')
+  }
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light'
+    setTheme(next)
+    localStorage.setItem('theme', next)
+    document.documentElement.dataset.theme = next
   }
 
   const startEdit = () => {
@@ -76,6 +86,20 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
+
+        {onMenuToggle && (
+          <button
+            className="btn-icon"
+            onClick={onMenuToggle}
+            aria-label="Toggle collections sidebar"
+            title="Toggle collections sidebar"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </button>
+        )}
 
         <Link to="/dashboard" className="topbar-brand">
           <AppLogo size={26} />
@@ -134,12 +158,37 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{user?.email || ''}</div>
                 </div>
 
+                <button className="dropdown-item" role="menuitem" onClick={toggleTheme}>
+                  {theme === 'light' ? (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                  ) : (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="5"/>
+                      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                  )}
+                  {theme === 'light' ? 'Dark theme' : 'Light theme'}
+                </button>
+
                 <button className="dropdown-item" role="menuitem" onClick={() => { setMenuOpen(false); openSettings() }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
                   </svg>
                   Settings
+                </button>
+
+                <button className="dropdown-item" role="menuitem" onClick={() => { setMenuOpen(false); setHistoryOpen(true) }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  History
                 </button>
 
                 <Link to="/dashboard" className="dropdown-item" role="menuitem" onClick={() => setMenuOpen(false)}>
@@ -167,6 +216,7 @@ export default function Topbar({ title, onTitleSave, onMenuToggle }) {
       </header>
 
       <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
     </>
   )
 }

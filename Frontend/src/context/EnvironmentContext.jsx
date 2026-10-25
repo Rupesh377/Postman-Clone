@@ -41,6 +41,7 @@ export function EnvironmentProvider({ children }) {
     const res = await createEnvironmentApi({ name })
     const created = res.data
     setEnvironments((prev) => [...prev, created])
+    setActiveEnvironment(created)
     return created
   }, [])
 
@@ -114,10 +115,13 @@ export function EnvironmentProvider({ children }) {
         setActiveEnvironment(null)
         return
       }
-      const found = environments.find((e) => e.id === environmentId) || null
-      setActiveEnvironment(found)
+      setEnvironments((prev) => {
+        const found = prev.find((e) => e.id === environmentId) || null
+        setActiveEnvironment(found)
+        return prev
+      })
     },
-    [environments]
+    []
   )
 
   return (

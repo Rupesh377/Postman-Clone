@@ -119,7 +119,7 @@ export default function RegisterPage() {
                 <div
                   key={i}
                   className="strength-bar"
-                  style={{ backgroundColor: i <= strength ? strengthColors[strength] : '#2d2d2d' }}
+                  style={{ backgroundColor: i <= strength ? strengthColors[strength] : 'var(--border-mid)' }}
                 />
               ))}
             </div>

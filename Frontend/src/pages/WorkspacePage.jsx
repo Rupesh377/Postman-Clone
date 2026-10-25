@@ -6,6 +6,7 @@ import RequestBuilder from '../components/RequestBuilder'
 import Modal from '../components/Modal'
 import { WorkspaceProvider, useWorkspace } from '../context/WorkspaceContext'
 import { EnvironmentProvider } from '../context/EnvironmentContext'
+import { useToast } from '../context/ToastContext'
 import {
   getWorkspaceApi,
   updateWorkspaceApi,
@@ -19,6 +20,7 @@ import '../styles/app.css'
 const ROLES = ['ADMIN', 'EDITOR', 'VIEWER']
 
 function MembersPanel({ workspaceId, onClose }) {
+  const toast = useToast()
   const [members, setMembers]       = useState([])
   const [loading, setLoading]       = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -55,7 +57,7 @@ function MembersPanel({ workspaceId, onClose }) {
       await removeMemberApi(workspaceId, member.id)
       setMembers((prev) => prev.filter((m) => m.id !== member.id))
     } catch {
-      alert('Failed to remove member')
+      toast.error('Failed to remove member')
     }
   }
 
@@ -64,7 +66,7 @@ function MembersPanel({ workspaceId, onClose }) {
       const res = await updateMemberRoleApi(workspaceId, member.id, newRole)
       setMembers((prev) => prev.map((m) => (m.id === member.id ? res.data : m)))
     } catch {
-      alert('Failed to update role')
+      toast.error('Failed to update role')
     }
   }
 
@@ -253,30 +255,143 @@ function NoRequestSelected({ onNew }) {
 function WorkspaceContent({ workspace, onWorkspaceSaved }) {
   const { collections, loadCollections } = useWorkspace()
 
-  const [sidebarCollapsed, setSidebar]          = useState(false)
-  const [activeRequest, setActiveRequest]       = useState(null)
-  const [activeCollection, setActiveCollection] = useState(null)
-  const [activeFolder, setActiveFolder]         = useState(null)
-  const [showMembers, setShowMembers]           = useState(false)
-  const [showEdit, setShowEdit]                 = useState(false)
+  const toast = useToast()
+  const [sidebarCollapsed, setSidebar] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900)
+  const [openTabs, setOpenTabs]         = useState([])
+  const [activeTabId, setActiveTabId]   = useState(null)
+  const [showMembers, setShowMembers]   = useState(false)
+  const [showEdit, setShowEdit]         = useState(false)
 
   // Load collections on mount so handleNewRequest can default to collections[0].
   useEffect(() => {
     loadCollections()
   }, [loadCollections])
 
-  // When a request is selected from the sidebar, track its collection too.
+  const activeTab = openTabs.find((t) => t.tabId === activeTabId) || null
+
   const handleSelectRequest = (request) => {
-    setActiveRequest(request)
-    setActiveCollection(request.collectionId)
-    setActiveFolder(request.folderId || null)
+    const existing = openTabs.find((t) => t.request?.id === request.id)
+    if (existing) {
+      setActiveTabId(existing.tabId)
+    } else {
+      const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+      const newTab = {
+        tabId,
+        request,
+        collectionId: request.collectionId,
+        folderId: request.folderId || null,
+        dirty: false,
+      }
+      setOpenTabs((prev) => [...prev, newTab])
+      setActiveTabId(tabId)
+    }
+    if (typeof window !== 'undefined' && window.innerWidth <= 900) {
+      setSidebar(true)
+    }
   }
 
-  // Called from sidebar + buttons — opens RequestBuilder pre-scoped to collection/folder.
   const handleNewRequest = (collectionId, folderId) => {
-    setActiveRequest(null)
-    setActiveCollection(collectionId ?? collections[0]?.id ?? null)
-    setActiveFolder(folderId ?? null)
+    const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+    const newTab = {
+      tabId,
+      request: null,
+      collectionId: collectionId ?? activeTab?.collectionId ?? collections[0]?.id ?? null,
+      folderId: folderId ?? null,
+      dirty: false,
+    }
+    setOpenTabs((prev) => [...prev, newTab])
+    setActiveTabId(tabId)
+  }
+
+  useEffect(() => {
+    const hasDirty = openTabs.some((t) => t.dirty)
+    if (!hasDirty) return
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [openTabs])
+
+  const closeTabsByPredicate = (predicate) => {
+    setOpenTabs((prevTabs) => {
+      const tabsToClose = prevTabs.filter(predicate)
+      if (tabsToClose.length === 0) return prevTabs
+
+      const nextTabs = prevTabs.filter((t) => !predicate(t))
+
+      setActiveTabId((currentActiveId) => {
+        if (!tabsToClose.some((t) => t.tabId === currentActiveId)) {
+          return currentActiveId
+        }
+        if (nextTabs.length === 0) {
+          return null
+        }
+        const activeIdx = prevTabs.findIndex((t) => t.tabId === currentActiveId)
+        const nextIdx = Math.min(activeIdx, nextTabs.length - 1)
+        return nextTabs[nextIdx >= 0 ? nextIdx : 0].tabId
+      })
+
+      return nextTabs
+    })
+  }
+
+  const handleCloseTab = (tabIdToClose) => {
+    const tabToClose = openTabs.find((t) => t.tabId === tabIdToClose)
+    if (!tabToClose) return
+    if (tabToClose.dirty) {
+      if (!window.confirm('Discard unsaved changes?')) {
+        return
+      }
+    }
+    closeTabsByPredicate((t) => t.tabId === tabIdToClose)
+  }
+
+  const handleRequestDeleted = (requestId) => {
+    closeTabsByPredicate((t) => t.request?.id === requestId)
+  }
+
+  const handleRequestRenamed = (updatedRequest) => {
+    setOpenTabs((prev) =>
+      prev.map((t) =>
+        t.request?.id === updatedRequest.id
+          ? { ...t, request: { ...t.request, ...updatedRequest } }
+          : t
+      )
+    )
+  }
+
+  const handleCollectionDeleted = (collectionId) => {
+    closeTabsByPredicate((t) => t.collectionId === collectionId || t.request?.collectionId === collectionId)
+  }
+
+  const handleFolderDeleted = (folderId) => {
+    closeTabsByPredicate((t) => t.folderId === folderId || t.request?.folderId === folderId)
+  }
+
+  const handleTabSaved = (tabId, savedRequest) => {
+    setOpenTabs((prev) =>
+      prev.map((t) =>
+        t.tabId === tabId
+          ? {
+              ...t,
+              request: savedRequest,
+              collectionId: savedRequest.collectionId || t.collectionId,
+              folderId: savedRequest.folderId ?? t.folderId,
+              dirty: false,
+            }
+          : t
+      )
+    )
+  }
+
+  const handleTabDirtyChange = (tabId, dirty) => {
+    setOpenTabs((prev) =>
+      prev.map((t) => (t.tabId === tabId ? { ...t, dirty } : t))
+    )
   }
 
   return (
@@ -293,6 +408,7 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
               })
               onWorkspaceSaved(res.data)
             } catch {
+              toast.error('Failed to rename workspace')
             }
           }}
           onMenuToggle={() => setSidebar((c) => !c)}
@@ -349,23 +465,77 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
           <Sidebar
             workspace={workspace}
             onSelectRequest={handleSelectRequest}
-            activeRequestId={activeRequest?.id}
+            activeRequestId={activeTab?.request?.id}
             collapsed={sidebarCollapsed}
             onNewRequest={handleNewRequest}
+            onRequestDeleted={handleRequestDeleted}
+            onRequestRenamed={handleRequestRenamed}
+            onCollectionDeleted={handleCollectionDeleted}
+            onFolderDeleted={handleFolderDeleted}
           />
 
           {/* Content area */}
           <div className="main-content">
-            {activeRequest === null && activeCollection === null ? (
+            {openTabs.length === 0 || !activeTab ? (
               <NoRequestSelected onNew={() => handleNewRequest()} />
             ) : (
-              <RequestBuilder
-                request={activeRequest}
-                collectionId={activeCollection || activeRequest?.collectionId}
-                folderId={activeFolder}
-                onSaved={(saved) => setActiveRequest(saved)}
-                onNew={() => handleNewRequest()}
-              />
+              <>
+                <div className="req-tab-strip">
+                  {openTabs.map((tab) => {
+                    const method = tab.request?.method || 'GET'
+                    const name = tab.request?.name || 'Untitled'
+                    const isActive = tab.tabId === activeTabId
+                    return (
+                      <div
+                        key={tab.tabId}
+                        className={`req-tab ${isActive ? 'active' : ''}`}
+                        onClick={() => setActiveTabId(tab.tabId)}
+                        title={name}
+                      >
+                        <span className={`method-badge method-${method}`}>{method}</span>
+                        <span className="req-tab-name">{name}</span>
+                        {tab.dirty && <span className="req-tab-dirty" title="Unsaved changes" />}
+                        <button
+                          type="button"
+                          className="req-tab-close"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCloseTab(tab.tabId)
+                          }}
+                          aria-label={`Close ${name} tab`}
+                          title="Close"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                    )
+                  })}
+                  <button
+                    type="button"
+                    className="req-tab-add"
+                    onClick={() => handleNewRequest()}
+                    title="New Request"
+                    aria-label="New tab"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </button>
+                </div>
+                <RequestBuilder
+                  key={activeTab.tabId}
+                  request={activeTab.request}
+                  collectionId={activeTab.collectionId || activeTab.request?.collectionId}
+                  folderId={activeTab.folderId}
+                  onSaved={(saved) => handleTabSaved(activeTab.tabId, saved)}
+                  onDirtyChange={(dirty) => handleTabDirtyChange(activeTab.tabId, dirty)}
+                  onNew={() => handleNewRequest()}
+                />
+              </>
             )}
           </div>
         </div>
