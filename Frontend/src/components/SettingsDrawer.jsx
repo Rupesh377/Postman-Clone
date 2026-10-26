@@ -23,9 +23,25 @@ export default function SettingsDrawer() {
     navigate('/login')
   }
 
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  const isUUIDVal = (val) =>
+    typeof val === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim())
+
+  const displayName = !user?.name || isUUIDVal(user.name) ? 'User' : user.name
+  const displayEmail = !user?.email || isUUIDVal(user.email) ? 'Email unavailable' : user.email
+
+  const initials = displayName !== 'User'
+    ? displayName.split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U'
+
+  const formatSignInMethod = (provider) => {
+    if (!provider) return 'Email & password'
+    const p = String(provider).toUpperCase()
+    if (p === 'GOOGLE') return 'Google'
+    if (p === 'GITHUB') return 'GitHub'
+    if (p === 'LOCAL') return 'Email & password'
+    return provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase()
+  }
 
   return (
     <>
@@ -52,19 +68,19 @@ export default function SettingsDrawer() {
             <div className="sd-avatar-row">
               <div className="sd-avatar">{initials}</div>
               <div>
-                <div className="sd-avatar-name">{user?.name}</div>
-                <div className="sd-avatar-email">{user?.email}</div>
+                <div className="sd-avatar-name">{displayName}</div>
+                <div className="sd-avatar-email">{displayEmail}</div>
               </div>
             </div>
 
             <div className="field" style={{ marginTop: 10 }}>
               <label className="field-label">Display name</label>
-              <input className="field-input" value={user?.name || ''} readOnly
+              <input className="field-input" value={displayName} readOnly
                 style={{ opacity: 0.5, cursor: 'default' }} />
             </div>
             <div className="field" style={{ marginTop: 8 }}>
               <label className="field-label">Email</label>
-              <input className="field-input" value={user?.email || ''} readOnly
+              <input className="field-input" value={displayEmail} readOnly
                 style={{ opacity: 0.4, cursor: 'default' }} />
             </div>
           </section>
@@ -87,9 +103,7 @@ export default function SettingsDrawer() {
             <div className="sd-info-row">
               <span className="sd-info-label">Sign-in method</span>
               <span className="sd-info-value">
-                {user?.provider
-                  ? user.provider.charAt(0).toUpperCase() + user.provider.slice(1).toLowerCase()
-                  : 'Email & password'}
+                {formatSignInMethod(user?.provider)}
               </span>
             </div>
 

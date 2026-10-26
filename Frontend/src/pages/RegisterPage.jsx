@@ -34,6 +34,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (loading) return
     const validationErrors = validate()
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
@@ -41,8 +42,12 @@ export default function RegisterPage() {
     }
     setLoading(true)
     try {
-      const res = await registerApi(form.name, form.email, form.password)
-      login(res.data)
+      const res = await registerApi(form.name.trim(), form.email.trim(), form.password)
+      const data = res.data || {}
+      if (data.user) {
+        data.user.provider = 'LOCAL'
+      }
+      login(data)
       navigate('/dashboard')
     } catch (err) {
       const msg = err.response?.data?.message || 'Registration failed. Try again.'

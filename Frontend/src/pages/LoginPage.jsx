@@ -43,6 +43,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (loading) return
     const validationErrors = validate()
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
@@ -50,11 +51,15 @@ export default function LoginPage() {
     }
     setLoading(true)
     try {
-      const res = await loginApi(form.email, form.password)
-      login(res.data)
+      const res = await loginApi(form.email.trim(), form.password)
+      const data = res.data || {}
+      if (data.user) {
+        data.user.provider = 'LOCAL'
+      }
+      login(data)
       navigate('/dashboard')
     } catch (err) {
-      const msg = err.response?.data?.message || 'Invalid email or password'
+      const msg = err.response?.data?.message || (err.response?.status === 401 ? 'Invalid email or password' : 'Unable to sign in. Please check your credentials.')
       setServerError(msg)
     } finally {
       setLoading(false)
@@ -99,8 +104,13 @@ export default function LoginPage() {
           <Link to="/forgot-password" className="link-muted">Forgot password?</Link>
         </div>
 
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? <span className="spinner" /> : 'Sign In'}
+        <button type="submit" className="btn btn-primary" disabled={loading} aria-busy={loading}>
+          {loading ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <span className="spinner" />
+              Signing in…
+            </span>
+          ) : 'Sign In'}
         </button>
 
         <OAuthButtons />

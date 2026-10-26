@@ -10,22 +10,61 @@ export default function OAuthSuccessPage() {
   useEffect(() => {
     const accessToken = searchParams.get('accessToken')
     const refreshToken = searchParams.get('refreshToken')
+    const providerParam = searchParams.get('provider') || sessionStorage.getItem('oauth_provider') || 'OAuth'
+    sessionStorage.removeItem('oauth_provider')
 
     if (accessToken && refreshToken) {
-      let userObj = { name: 'User', email: '' }
+      let payload = {}
       try {
         const payloadBase64 = accessToken.split('.')[1]
         if (payloadBase64) {
           const jsonStr = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'))
-          const payload = JSON.parse(jsonStr)
-          userObj = {
-            id: payload.userId || payload.id || null,
-            name: payload.name || payload.fullName || payload.sub?.split('@')[0] || 'User',
-            email: payload.email || payload.sub || '',
-          }
+          payload = JSON.parse(jsonStr)
         }
       } catch {
-        // Fallback to default user object
+        // Fallback
+      }
+
+      const isUUIDVal = (v) =>
+        typeof v === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.trim())
+
+      const isValidEmailVal = (v) =>
+        typeof v === 'string' &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
+
+      // ID resolution
+      const userId = payload.userId || payload.id || (isUUIDVal(payload.sub) ? payload.sub : null)
+
+      // Query params or token claims if available
+      const qName = searchParams.get('name')
+      const qEmail = searchParams.get('email')
+
+      let userName = qName || payload.name || payload.fullName || null
+      if (!userName || isUUIDVal(userName)) {
+        if (isValidEmailVal(payload.sub)) {
+          userName = payload.sub.split('@')[0]
+        } else {
+          userName = 'User'
+        }
+      }
+
+      let userEmail = qEmail || payload.email || null
+      if (!userEmail || isUUIDVal(userEmail) || !isValidEmailVal(userEmail)) {
+        if (isValidEmailVal(payload.sub)) {
+          userEmail = payload.sub
+        } else {
+          userEmail = null
+        }
+      }
+
+      const userObj = {
+        id: userId,
+        name: userName,
+        email: userEmail,
+        role: payload.role || 'USER',
+        emailVerified: typeof payload.emailVerified === 'boolean' ? payload.emailVerified : true,
+        provider: providerParam,
       }
 
       login({ accessToken, refreshToken, user: userObj })

@@ -15,9 +15,25 @@ export default function SettingsPage() {
     navigate('/login')
   }
 
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  const isUUIDVal = (val) =>
+    typeof val === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim())
+
+  const displayName = !user?.name || isUUIDVal(user.name) ? 'User' : user.name
+  const displayEmail = !user?.email || isUUIDVal(user.email) ? 'Email unavailable' : user.email
+
+  const initials = displayName !== 'User'
+    ? displayName.split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U'
+
+  const formatSignInMethod = (provider) => {
+    if (!provider) return 'Email & password'
+    const p = String(provider).toUpperCase()
+    if (p === 'GOOGLE') return 'Google'
+    if (p === 'GITHUB') return 'GitHub'
+    if (p === 'LOCAL') return 'Email & password'
+    return provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase()
+  }
 
   return (
     <div className="app-shell" style={{ flexDirection: 'column' }}>
@@ -42,19 +58,19 @@ export default function SettingsPage() {
                 {initials}
               </div>
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{user?.name}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{user?.email}</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{displayName}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{displayEmail}</div>
               </div>
             </div>
 
             <div className="field">
               <label className="field-label">Display name</label>
-              <input className="field-input" value={user?.name || ''} readOnly
+              <input className="field-input" value={displayName} readOnly
                 style={{ opacity: 0.5, cursor: 'default' }} />
             </div>
             <div className="field">
               <label className="field-label">Email</label>
-              <input className="field-input" value={user?.email || ''} readOnly
+              <input className="field-input" value={displayEmail} readOnly
                 style={{ opacity: 0.4, cursor: 'default' }} />
             </div>
           </div>
@@ -79,9 +95,7 @@ export default function SettingsPage() {
             <div className="settings-row">
               <span className="settings-row-label">Sign-in method</span>
               <span className="settings-row-value">
-                {user?.provider
-                  ? user.provider.charAt(0).toUpperCase() + user.provider.slice(1).toLowerCase()
-                  : 'Email & password'}
+                {formatSignInMethod(user?.provider)}
               </span>
             </div>
             <div style={{ paddingTop: '16px' }}>

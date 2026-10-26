@@ -4,7 +4,6 @@ import { useToast } from '../context/ToastContext'
 import { deleteRequestApi, createRequestApi, updateRequestApi } from '../api/requestApi'
 import { updateCollectionApi, updateFolderApi } from '../api/collectionApi'
 import Modal from './Modal'
-import ExportImportModal from './ExportImportModal'
 import RunnerModal from './RunnerModal'
 import '../styles/app.css'
 
@@ -225,7 +224,7 @@ function FolderNode({ folder, collectionId, activeRequestId, onSelectRequest, on
   )
 }
 
-function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection, onNewRequest, onDuplicateRequest, onRenameRequest, onRequestDeleted, onFolderDeleted, onRunCollection, onExportCollection }) {
+function CollectionNode({ collection, activeRequestId, onSelectRequest, onDeleteCollection, onRenameCollection, onNewRequest, onDuplicateRequest, onRenameRequest, onRequestDeleted, onFolderDeleted, onRunCollection }) {
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [showAddFolder, setShowAddFolder] = useState(false)
@@ -331,12 +330,6 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
               </button>
               <button
                 className="tree-add-menu-item"
-                onClick={(e) => { e.stopPropagation(); setShowMenu(false); onExportCollection?.(collection) }}
-              >
-                Export
-              </button>
-              <button
-                className="tree-add-menu-item"
                 onClick={(e) => { e.stopPropagation(); setShowMenu(false); setOpen(true); onNewRequest(collection.id, null) }}
               >
                 New Request
@@ -430,8 +423,6 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
 
   useEffect(() => { loadCollections() }, [loadCollections])
 
-  const [showImportExport, setShowImportExport] = useState(false)
-  const [exportTarget, setExportTarget] = useState(null)
   const [runnerCollection, setRunnerCollection] = useState(null)
 
   const handleDuplicateRequest = async (request, collectionId) => {
@@ -523,18 +514,6 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
             <div style={{ display: 'flex', gap: 2 }}>
               <button
                 className="tree-add-btn"
-                onClick={() => { setExportTarget(null); setShowImportExport(true) }}
-                title="Import collection"
-                aria-label="Import collection"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-              </button>
-              <button
-                className="tree-add-btn"
                 onClick={() => setShowAddCollection(true)}
                 title="New collection"
                 aria-label="Add collection"
@@ -572,7 +551,6 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
               onRequestDeleted={onRequestDeleted}
               onFolderDeleted={onFolderDeleted}
               onRunCollection={(c) => setRunnerCollection(c)}
-              onExportCollection={(c) => { setExportTarget(c); setShowImportExport(true) }}
             />
           ))}
         </div>
@@ -620,15 +598,6 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
             </div>
           </form>
         </Modal>
-      )}
-      {showImportExport && (
-        <ExportImportModal
-          collection={exportTarget}
-          onClose={() => { setShowImportExport(false); setExportTarget(null) }}
-          onImported={() => loadCollections()}
-          addCollection={async (data) => { const r = await addCollection(data); return r }}
-          addFolder={async (colId, data) => { const r = await addFolder(colId, data); return r }}
-        />
       )}
       {runnerCollection && (
         <RunnerModal
