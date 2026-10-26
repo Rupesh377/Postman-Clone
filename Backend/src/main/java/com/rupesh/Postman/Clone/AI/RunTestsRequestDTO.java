@@ -1,16 +1,20 @@
 package com.rupesh.Postman.Clone.AI;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
 public class RunTestsRequestDTO {
 
-    @NotEmpty
+    @NotEmpty(message = "At least one test assertion is required")
     @Valid
+    @Size(max = 50, message = "A maximum of 50 assertions is allowed")
     private List<TestAssertionDTO> assertions;
 
     public List<TestAssertionDTO> getAssertions() {
@@ -23,23 +27,26 @@ public class RunTestsRequestDTO {
 
     public static class TestAssertionDTO {
 
-        @NotNull
+        @NotNull(message = "Assertion type is required")
         private AssertionType type;
 
-        @Size(max = 500)
+        @Size(max = 500, message = "Description cannot exceed 500 characters")
         private String description;
 
+        @Min(value = 100, message = "Expected status code must be at least 100")
+        @Max(value = 599, message = "Expected status code cannot exceed 599")
         private Integer expectedStatusCode;
 
-        @Size(max = 500)
+        @Size(max = 500, message = "JSON path cannot exceed 500 characters")
         private String jsonPath;
 
-        @Size(max = 2000)
+        @Size(max = 2000, message = "Expected value cannot exceed 2000 characters")
         private String expectedValue;
 
-        @Size(max = 200)
+        @Size(max = 200, message = "Header name cannot exceed 200 characters")
         private String headerName;
 
+        @Positive(message = "Maximum response time must be positive")
         private Long maxResponseTimeMs;
 
         public AssertionType getType() {
@@ -97,5 +104,13 @@ public class RunTestsRequestDTO {
         public void setMaxResponseTimeMs(Long maxResponseTimeMs) {
             this.maxResponseTimeMs = maxResponseTimeMs;
         }
+    }
+
+    public enum AssertionType {
+        STATUS_CODE_EQUALS,
+        JSON_PATH_EXISTS,
+        JSON_PATH_EQUALS,
+        HEADER_CONTAINS,
+        RESPONSE_TIME_LESS_THAN_MS
     }
 }
