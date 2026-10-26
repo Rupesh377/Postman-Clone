@@ -1,6 +1,4 @@
 package com.rupesh.Postman.Clone.AI;
-
-
 import java.util.List;
 
 public class GenerateTestsResponseDTO {

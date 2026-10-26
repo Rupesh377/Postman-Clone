@@ -27,6 +27,5 @@ public class RestClientConfig {
         return RestClient.builder()
                 .requestFactory(factory)
                 .build();
-        //return RestClient.builder().build();
     }
 }
