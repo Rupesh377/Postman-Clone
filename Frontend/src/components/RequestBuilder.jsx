@@ -3,11 +3,18 @@ import { useWorkspace } from '../context/WorkspaceContext'
 import { useEnvironment } from '../context/EnvironmentContext'
 import { createRequestApi, updateRequestApi } from '../api/requestApi'
 import { executeRequestApi, getExecutionHistoryApi, createEnvironmentApi } from '../api/environmentApi'
-import { generateBodyApi, suggestHeadersApi, explainResponseApi, generateDocsApi, generateTestsApi } from '../api/aiApi'
 import EnvironmentSelector from './EnvironmentSelector'
 import CodeModal from './CodeModal'
+import AIAssistantModal from './ai/AIAssistantModal'
+import GenerateDocsPanel from './ai/GenerateDocsPanel'
+import GenerateTestsPanel from './ai/GenerateTestsPanel'
+import TestAssertionEditor from './ai/TestAssertionEditor'
+import GenerateAndRunTestsPanel from './ai/GenerateAndRunTestsPanel'
+import ExplainResponsePanel from './ai/ExplainResponsePanel'
+import { SparklesIcon, BoltIcon, BeakerIcon, PlayIcon, HeadersIcon } from './ai/aiIcons'
 import '../styles/app.css'
 import '../styles/environment.css'
+
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
@@ -362,22 +369,11 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
     onDirtyChangeRef.current = onDirtyChange
   }, [onDirtyChange])
 
-  // AI state
-  const [aiBodyLoading, setAiBodyLoading]         = useState(false)
-  const [aiBodyError, setAiBodyError]             = useState(null)
-  const [aiBodyDesc, setAiBodyDesc]               = useState('')
-  const [aiHeadersLoading, setAiHeadersLoading]   = useState(false)
-  const [aiHeadersError, setAiHeadersError]       = useState(null)
-  const [aiHeadersSuggestions, setAiHeadersSugg]  = useState(null)
-  const [aiExplainLoading, setAiExplainLoading]   = useState(false)
-  const [aiExplainError, setAiExplainError]       = useState(null)
-  const [aiExplain, setAiExplain]                 = useState(null)
-  const [aiDocsLoading, setAiDocsLoading]         = useState(false)
-  const [aiDocsError, setAiDocsError]             = useState(null)
-  const [aiDocs, setAiDocs]                       = useState(null)
-  const [aiTestsLoading, setAiTestsLoading]       = useState(false)
-  const [aiTestsError, setAiTestsError]           = useState(null)
-  const [aiTests, setAiTests]                     = useState(null)
+  // AI Assistant Modal & Workbench state
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [aiModalInitialTool, setAiModalInitialTool] = useState('body')
+  const [testsSubTab, setTestsSubTab] = useState('runner')
+
 
   const undefinedVars = useMemo(() => {
     if (!activeEnvironment) return []
@@ -671,70 +667,42 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
     setActiveRespTab('body')
   }
 
-  // ── AI handlers ────────────────────────────────────────────────────────────
+  // ── AI helpers & callbacks ────────────────────────────────────────────────
+  const handleApplyBodyFromAI = useCallback((newBody) => {
+    setBody(newBody)
+    if (bodyMode === 'none') {
+      setBodyMode('json')
+    }
+  }, [bodyMode])
 
-  const handleAiGenerateBody = async () => {
-    if (!aiBodyDesc.trim()) return
-    setAiBodyLoading(true); setAiBodyError(null)
-    try {
-      const res = await generateBodyApi(aiBodyDesc.trim())
-      setBody(typeof res.data.body === 'string' ? res.data.body : JSON.stringify(res.data.body, null, 2))
-    } catch (e) { setAiBodyError(e.response?.data?.message || 'AI request failed') }
-    finally { setAiBodyLoading(false) }
-  }
-
-  const handleAiSuggestHeaders = async () => {
-    setAiHeadersLoading(true); setAiHeadersError(null); setAiHeadersSugg(null)
-    try {
-      const res = await suggestHeadersApi(url, method, body, serializeKV(headers))
-      setAiHeadersSugg(res.data)
-    } catch (e) { setAiHeadersError(e.response?.data?.message || 'AI request failed') }
-    finally { setAiHeadersLoading(false) }
-  }
-
-  const handleAddSuggestedHeader = (name, value) => {
+  const handleApplyHeadersFromAI = useCallback((headersToApply) => {
     setHeaders((prev) => {
-      const next = prev.filter((h) => h.key || h.value)
-      return [...next, { key: name, value, enabled: true }, { key: '', value: '', enabled: true }]
+      const existing = prev.filter((h) => h.key || h.value)
+      const existingMap = new Map()
+      existing.forEach((h, idx) => {
+        existingMap.set(h.key.trim().toLowerCase(), idx)
+      })
+
+      const updated = [...existing]
+      headersToApply.forEach((newH) => {
+        const lower = newH.name.trim().toLowerCase()
+        if (existingMap.has(lower)) {
+          const idx = existingMap.get(lower)
+          updated[idx] = { key: newH.name, value: newH.value, enabled: true }
+        } else {
+          updated.push({ key: newH.name, value: newH.value, enabled: true })
+          existingMap.set(lower, updated.length - 1)
+        }
+      })
+
+      return [...updated, { key: '', value: '', enabled: true }]
     })
-  }
+  }, [])
 
-  const handleAiExplain = async () => {
-    if (!response) return
-    setAiExplainLoading(true); setAiExplainError(null); setAiExplain(null)
-    try {
-      const res = await explainResponseApi(
-        response.status,
-        response.body || '',
-        JSON.stringify(response.headers || {}),
-      )
-      setAiExplain(res.data)
-    } catch (e) { setAiExplainError(e.response?.data?.message || 'AI request failed') }
-    finally { setAiExplainLoading(false) }
-  }
+  const handleSaveForAI = useCallback(async () => {
+    return await doSave()
+  }, [doSave])
 
-  const handleAiGenerateDocs = async () => {
-    setAiDocsLoading(true); setAiDocsError(null); setAiDocs(null)
-    try {
-      const statusCode = response?.status >= 100 && response?.status <= 599 ? response.status : undefined
-      const res = await generateDocsApi(
-        url, method, serializeKV(headers), body,
-        statusCode, response?.body || '',
-      )
-      setAiDocs(res.data.documentation)
-    } catch (e) { setAiDocsError(e.response?.data?.message || 'AI request failed') }
-    finally { setAiDocsLoading(false) }
-  }
-
-  const handleAiGenerateTests = async () => {
-    setAiTestsLoading(true); setAiTestsError(null); setAiTests(null)
-    try {
-      const statusCode = response?.status >= 100 && response?.status <= 599 ? response.status : undefined
-      const res = await generateTestsApi(url, method, body, statusCode, response?.body || '')
-      setAiTests(res.data.testCases || [])
-    } catch (e) { setAiTestsError(e.response?.data?.message || 'AI request failed') }
-    finally { setAiTestsLoading(false) }
-  }
 
   const paramCount  = params.filter((p) => p.enabled && p.key).length
   const headerCount = headers.filter((h) => h.enabled && h.key).length
@@ -772,6 +740,18 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
         </button>
         <button className="btn-sm btn-sm-ghost" onClick={() => setShowCode(true)} type="button" title="Generate code snippet">
           {'</>'}
+        </button>
+        <button
+          className="btn-ai-assistant"
+          onClick={() => {
+            setAiModalInitialTool('body')
+            setShowAiModal(true)
+          }}
+          type="button"
+          title="Open APIForge Spring AI Assistant"
+        >
+          <SparklesIcon size={14} />
+          <span>AI Assistant</span>
         </button>
       </div>
 
@@ -883,34 +863,19 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
         {activeTab === 'headers' && (
           <>
             <KVTable pairs={headers} onChange={setHeaders} keyPlaceholder="Header" valuePlaceholder="value" />
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button className="btn-sm btn-sm-ghost" onClick={handleAiSuggestHeaders} disabled={aiHeadersLoading}>
-                {aiHeadersLoading ? 'Loading…' : 'Suggest headers'}
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                type="button"
+                className="btn-sm btn-ai-assistant"
+                onClick={() => {
+                  setAiModalInitialTool('headers')
+                  setShowAiModal(true)
+                }}
+              >
+                <SparklesIcon size={13} />
+                <span>Suggest Headers with AI</span>
               </button>
-              {aiHeadersError && <span style={{ fontSize: 12, color: 'var(--error)' }}>{aiHeadersError}</span>}
             </div>
-            {aiHeadersSuggestions && (
-              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {aiHeadersSuggestions.authenticationSuggestion && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Auth: {aiHeadersSuggestions.authenticationSuggestion}
-                  </div>
-                )}
-                {aiHeadersSuggestions.explanation && (
-                  <div style={{ fontSize: 12, color: 'var(--text-subtle)' }}>{aiHeadersSuggestions.explanation}</div>
-                )}
-                {(aiHeadersSuggestions.headers || []).map((h, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                    <code style={{ color: 'var(--text-primary)', fontFamily: 'var(--mono)' }}>{h.name}: {h.value}</code>
-                    <span style={{ color: 'var(--text-subtle)', flex: 1 }}>{h.reason}</span>
-                    <button className="btn-sm btn-sm-ghost" style={{ height: 22, fontSize: 11, padding: '0 7px' }}
-                      onClick={() => handleAddSuggestedHeader(h.name, h.value)}>
-                      Add
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </>
         )}
         {activeTab === 'auth' && (
@@ -984,6 +949,17 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
                   Beautify
                 </button>
               )}
+              <button
+                type="button"
+                className="btn-sm btn-ai-assistant"
+                style={{ height: 22, fontSize: 11, padding: '0 8px', marginLeft: 'auto' }}
+                onClick={() => {
+                  setAiModalInitialTool('body')
+                  setShowAiModal(true)
+                }}
+              >
+                <SparklesIcon size={12} /> Generate Body with AI
+              </button>
             </div>
             {bodyMode !== 'none' && (
               <textarea
@@ -995,85 +971,79 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
                 aria-label="Request body"
               />
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                className="field-input"
-                style={{ flex: 1, height: 28, fontSize: 12 }}
-                placeholder="Describe what to generate…"
-                value={aiBodyDesc}
-                onChange={(e) => setAiBodyDesc(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAiGenerateBody() }}
-              />
-              <button className="btn-sm btn-sm-ghost" onClick={handleAiGenerateBody} disabled={aiBodyLoading || !aiBodyDesc.trim()}>
-                {aiBodyLoading ? 'Loading…' : 'Generate with AI'}
-              </button>
-              {aiBodyError && <span style={{ fontSize: 12, color: 'var(--error)' }}>{aiBodyError}</span>}
-            </div>
           </div>
         )}
         {activeTab === 'docs' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <button className="btn-sm btn-sm-ghost" style={{ alignSelf: 'flex-start' }}
-              onClick={handleAiGenerateDocs} disabled={aiDocsLoading}>
-              {aiDocsLoading ? 'Loading…' : 'Generate docs'}
-            </button>
-            {aiDocsError && <div className="alert alert-error" style={{ fontSize: 12 }}>{aiDocsError}</div>}
-            {aiDocs && (
-              <div style={{ position: 'relative' }}>
-                <pre style={{
-                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                  fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.6,
-                  color: 'var(--text-secondary)', background: 'var(--bg-void)',
-                  border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                  padding: 12, margin: 0,
-                }}>
-                  {aiDocs}
-                </pre>
-                <button className="btn-sm btn-sm-ghost" style={{ position: 'absolute', top: 8, right: 8, fontSize: 11 }}
-                  onClick={async () => {
-                    let ok = false
-                    try {
-                      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(aiDocs); ok = true }
-                    } catch {}
-                    if (!ok) {
-                      try {
-                        const ta = document.createElement('textarea'); ta.value = aiDocs; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok = true
-                      } catch {}
-                    }
-                    if (ok) { setCopiedDocs(true); setTimeout(() => setCopiedDocs(false), 2000) }
-                  }}>
-                  {copiedDocs ? '✓ Copied!' : 'Copy'}
-                </button>
-              </div>
-            )}
-          </div>
+          <GenerateDocsPanel
+            url={url}
+            method={method}
+            headers={headers}
+            body={body}
+            response={response}
+          />
         )}
         {activeTab === 'tests' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <button className="btn-sm btn-sm-ghost" style={{ alignSelf: 'flex-start' }}
-              onClick={handleAiGenerateTests} disabled={aiTestsLoading}>
-              {aiTestsLoading ? 'Loading…' : 'Generate test cases'}
-            </button>
-            {aiTestsError && <div className="alert alert-error" style={{ fontSize: 12 }}>{aiTestsError}</div>}
-            {aiTests && aiTests.length === 0 && (
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No test cases returned.</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className={`btn-sm ${testsSubTab === 'runner' ? 'btn-sm-primary' : 'btn-sm-ghost'}`}
+                style={{ height: '26px', fontSize: '11.5px' }}
+                onClick={() => setTestsSubTab('runner')}
+              >
+                <PlayIcon size={12} /> Test Assertions Runner
+              </button>
+              <button
+                type="button"
+                className={`btn-sm ${testsSubTab === 'generator' ? 'btn-sm-primary' : 'btn-sm-ghost'}`}
+                style={{ height: '26px', fontSize: '11.5px' }}
+                onClick={() => setTestsSubTab('generator')}
+              >
+                <BeakerIcon size={12} /> AI Test Case Generator
+              </button>
+              <button
+                type="button"
+                className={`btn-sm ${testsSubTab === 'gen-and-run' ? 'btn-sm-primary' : 'btn-sm-ghost'}`}
+                style={{ height: '26px', fontSize: '11.5px' }}
+                onClick={() => setTestsSubTab('gen-and-run')}
+              >
+                <BoltIcon size={12} /> 1-Click Generate & Run
+              </button>
+            </div>
+
+            {testsSubTab === 'runner' && (
+              <TestAssertionEditor
+                requestId={request?.id}
+                requestName={name}
+                environmentId={activeEnvironment?.id}
+                environmentName={activeEnvironment?.name}
+                onSaveFirst={handleSaveForAI}
+              />
             )}
-            {aiTests && aiTests.map((t, i) => (
-              <div key={i} style={{
-                padding: '10px 12px', background: 'var(--bg-panel)',
-                border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-              }}>
-                <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)', marginBottom: 4 }}>
-                  {t.name}
-                  <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 400, color: 'var(--text-subtle)',
-                    background: 'var(--bg-input)', padding: '1px 6px', borderRadius: 'var(--radius-xs)' }}>
-                    {t.testType}
-                  </span>
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>{t.description}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-subtle)' }}>Expected: {t.expectedResult}</div>
-              </div>
-            ))}
+
+            {testsSubTab === 'generator' && (
+              <GenerateTestsPanel
+                url={url}
+                method={method}
+                body={body}
+                response={response}
+                onTransferToRunner={() => setTestsSubTab('runner')}
+              />
+            )}
+
+            {testsSubTab === 'gen-and-run' && (
+              <GenerateAndRunTestsPanel
+                requestId={request?.id}
+                requestName={name}
+                url={url}
+                method={method}
+                body={body}
+                response={response}
+                environmentId={activeEnvironment?.id}
+                environmentName={activeEnvironment?.name}
+                onSaveFirst={handleSaveForAI}
+              />
+            )}
           </div>
         )}
       </div>
@@ -1101,6 +1071,15 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
                 <span className="tab-badge">{Object.keys(response.headers).length}</span>
               )}
             </button>
+            <button
+              className={`tab-btn ${activeRespTab === 'aiExplain' ? 'active' : ''}`}
+              onClick={() => setActiveRespTab('aiExplain')}
+              role="tab" aria-selected={activeRespTab === 'aiExplain'}
+              style={{ fontSize: '12px', padding: '8px 12px' }}
+            >
+              <SparklesIcon size={12} style={{ display: 'inline', marginRight: 4, color: 'var(--orange)' }} />
+              AI Explain
+            </button>
           </div>
 
           {response && (
@@ -1121,6 +1100,21 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
                   <span className="response-stat-label">Size:</span>
                   <span style={{ color: 'var(--text-primary)' }}>{formatBytes(response.size)}</span>
                 </span>
+              )}
+              {response.status != null && response.status !== 0 && (
+                <button
+                  className="btn-sm btn-ai-assistant"
+                  style={{ fontSize: 10, height: 22, padding: '0 7px' }}
+                  onClick={() => {
+                    setAiModalInitialTool('explain')
+                    setShowAiModal(true)
+                  }}
+                  type="button"
+                  title="Explain response with AI"
+                >
+                  <SparklesIcon size={11} />
+                  <span>Explain</span>
+                </button>
               )}
               {response.body != null && (
                 <>
@@ -1181,26 +1175,9 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
           </div>
         )}
 
-        {response && activeRespTab === 'body' && (
-          <div style={{ padding: '6px 12px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <button className="btn-sm btn-sm-ghost" style={{ fontSize: 11 }}
-              onClick={handleAiExplain} disabled={aiExplainLoading}>
-              {aiExplainLoading ? 'Loading…' : 'Explain'}
-            </button>
-            {aiExplainError && <span style={{ fontSize: 11, color: 'var(--error)' }}>{aiExplainError}</span>}
-            {aiExplain && (
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                title={aiExplain.explanation}>
-                {aiExplain.explanation}
-              </span>
-            )}
-          </div>
-        )}
-
-        {aiExplain && activeRespTab === 'body' && (aiExplain.possibleCause || (aiExplain.suggestedFixes?.length > 0)) && (
-          <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>
-            {aiExplain.possibleCause && <div><strong>Cause:</strong> {aiExplain.possibleCause}</div>}
-            {aiExplain.suggestedFixes?.map((f, i) => <div key={i}>• {f}</div>)}
+        {response && activeRespTab === 'aiExplain' && (
+          <div style={{ padding: '16px 20px', overflowY: 'auto' }}>
+            <ExplainResponsePanel response={response} />
           </div>
         )}
 
@@ -1226,6 +1203,25 @@ export default function RequestBuilder({ request, collectionId, folderId, onSave
       </div>
 
       <HistoryPanel requestId={request?.id} onSelectRun={handleSelectHistoryRun} />
+
+      {/* ── APIForge Spring AI Assistant Workbench Modal ── */}
+      <AIAssistantModal
+        isOpen={showAiModal}
+        initialTool={aiModalInitialTool}
+        onClose={() => setShowAiModal(false)}
+        requestId={request?.id}
+        requestName={name}
+        url={url}
+        method={method}
+        headers={headers}
+        body={body}
+        response={response}
+        environmentId={activeEnvironment?.id}
+        environmentName={activeEnvironment?.name}
+        onApplyBody={handleApplyBodyFromAI}
+        onApplyHeaders={handleApplyHeadersFromAI}
+        onSaveFirst={handleSaveForAI}
+      />
     </div>
   )
 }

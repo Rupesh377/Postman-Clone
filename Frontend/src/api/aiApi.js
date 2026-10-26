@@ -16,3 +16,14 @@ export const generateDocsApi      = (url, method, requestHeaders, requestBody, r
 
 export const generateTestsApi     = (url, method, requestBody, expectedStatusCode, sampleResponseBody) =>
   api.post(`${BASE}/generate-tests`, { url, method, requestBody, expectedStatusCode, sampleResponseBody })
+
+export const runTestsApi           = (requestId, assertions, environmentId) => {
+  const query = environmentId ? `?environmentId=${encodeURIComponent(environmentId)}` : ''
+  return api.post(`${BASE}/run-tests/${requestId}${query}`, { assertions })
+}
+
+export const generateAndRunTestsApi = (requestId, data, environmentId) => {
+  const query = environmentId ? `?environmentId=${encodeURIComponent(environmentId)}` : ''
+  return api.post(`${BASE}/generate-and-run-tests/${requestId}${query}`, data)
+}
+
