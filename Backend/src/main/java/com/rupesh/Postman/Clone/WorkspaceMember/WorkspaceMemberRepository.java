@@ -19,4 +19,5 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
 
     List<WorkspaceMember> findByUser(User user);
 
+    boolean existsByWorkspaceIdAndUserEmailIgnoreCase(Long workspaceId, String email);
 }

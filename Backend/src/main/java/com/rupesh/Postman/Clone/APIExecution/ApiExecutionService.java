@@ -212,19 +212,8 @@ public class ApiExecutionService {
                 .getCollection()
                 .getWorkspace()
                 .getId();
-
-        String email = authentication.getName();
-
-        boolean isOwner = workspaceMemberRepository.findAll().stream()
-                .anyMatch(member -> member.getWorkspace().getId().equals(workspaceId)
-                                && member.getUser().getEmail().equalsIgnoreCase(email)
-                                && "OWNER".equals(member.getRole().name()));
-
-        boolean isMember = workspaceMemberRepository.findAll().stream()
-                .anyMatch(member -> member.getWorkspace().getId().equals(workspaceId)
-                                && member.getUser().getEmail().equalsIgnoreCase(email));
-
-        if (!isMember) {
+        boolean hasAccess = workspaceMemberRepository.existsByWorkspaceIdAndUserEmailIgnoreCase(workspaceId, authentication.getName());
+        if (!hasAccess) {
             throw new AccessDeniedException("You are not allowed to access this API execution");
         }
 
