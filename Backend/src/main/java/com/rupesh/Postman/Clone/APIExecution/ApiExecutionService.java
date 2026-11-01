@@ -1,11 +1,13 @@
 package com.rupesh.Postman.Clone.APIExecution;
 
 
+import com.rupesh.Postman.Clone.Exception.AccessDeniedException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.APIRequest.ApiRequest;
 import com.rupesh.Postman.Clone.APIRequest.ApiRequestRepository;
 import com.rupesh.Postman.Clone.History.RequestHistoryService;
 import com.rupesh.Postman.Clone.Environment.Variable.VariableResolver;
+import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -29,6 +31,7 @@ public class ApiExecutionService {
     private final ObjectMapper objectMapper;
     private final VariableResolver variableResolver;
     private final RequestHistoryService requestHistoryService;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
 
     public ApiExecutionResponseDTO execute(Long requestId, Long environmentId, Authentication authentication) {
 
@@ -193,9 +196,38 @@ public class ApiExecutionService {
         if (headers == null || headers.isBlank()) {
             return Map.of();
         }
-        return objectMapper.readValue(
-                headers,
-                new TypeReference<Map<String, String>>() {}
-        );
+        return objectMapper.readValue(headers, new TypeReference<Map<String, String>>() {});
+    }
+
+
+    public APIExecution getExecutionById(Long executionId, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("Authentication is required");
+        }
+
+        APIExecution execution = apiExecutionRepository.findById(executionId)
+                .orElseThrow(() -> new ResourceNotFoundException("API execution not found with id: " + executionId));
+
+        Long workspaceId = execution.getApiRequest()
+                .getCollection()
+                .getWorkspace()
+                .getId();
+
+        String email = authentication.getName();
+
+        boolean isOwner = workspaceMemberRepository.findAll().stream()
+                .anyMatch(member -> member.getWorkspace().getId().equals(workspaceId)
+                                && member.getUser().getEmail().equalsIgnoreCase(email)
+                                && "OWNER".equals(member.getRole().name()));
+
+        boolean isMember = workspaceMemberRepository.findAll().stream()
+                .anyMatch(member -> member.getWorkspace().getId().equals(workspaceId)
+                                && member.getUser().getEmail().equalsIgnoreCase(email));
+
+        if (!isMember) {
+            throw new AccessDeniedException("You are not allowed to access this API execution");
+        }
+
+        return execution;
     }
 }

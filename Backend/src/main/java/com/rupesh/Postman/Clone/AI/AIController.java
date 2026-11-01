@@ -1,5 +1,8 @@
 package com.rupesh.Postman.Clone.AI;
 
+import com.rupesh.Postman.Clone.AI.DTO.*;
+import com.rupesh.Postman.Clone.APIExecution.APIExecution;
+import com.rupesh.Postman.Clone.APIExecution.ApiExecutionService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -11,10 +14,12 @@ public class AIController {
 
     private final AIService aiService;
     private final ApiTestRunnerService apiTestRunnerService;
+    private final ApiExecutionService apiExecutionService;
 
-    public AIController(AIService aiService, ApiTestRunnerService apiTestRunnerService) {
+    public AIController(AIService aiService, ApiTestRunnerService apiTestRunnerService, ApiExecutionService apiExecutionService) {
         this.aiService = aiService;
         this.apiTestRunnerService = apiTestRunnerService;
+        this.apiExecutionService = apiExecutionService;
     }
 
     @PostMapping("/ask")
@@ -73,5 +78,18 @@ public class AIController {
 
         RunTestsResponseDTO results = apiTestRunnerService.runTests(requestId, environmentId, runRequest,authentication );
         return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/explain-execution/{executionId}")
+    public ResponseEntity<ExplainResponseResponseDTO> explainExecution(@PathVariable Long executionId, Authentication authentication) {
+
+        APIExecution execution = apiExecutionService.getExecutionById(executionId, authentication);
+
+        ExplainResponseRequestDTO request = new ExplainResponseRequestDTO();
+        request.setStatusCode(execution.getStatusCode());
+        request.setResponseHeaders(execution.getResponseHeaders());
+        request.setResponseBody(execution.getResponseBody());
+
+        return ResponseEntity.ok(aiService.explainResponse(request));
     }
 }

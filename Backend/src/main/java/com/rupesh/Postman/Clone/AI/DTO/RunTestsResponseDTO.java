@@ -1,4 +1,4 @@
-package com.rupesh.Postman.Clone.AI;
+package com.rupesh.Postman.Clone.AI.DTO;
 
 import java.util.List;
 

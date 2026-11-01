@@ -1,6 +1,9 @@
 package com.rupesh.Postman.Clone.AI;
 
-import com.rupesh.Postman.Clone.AI.RunTestsResponseDTO.TestResult;
+import com.rupesh.Postman.Clone.AI.DTO.GenerateTestsResponseDTO;
+import com.rupesh.Postman.Clone.AI.DTO.RunTestsRequestDTO;
+import com.rupesh.Postman.Clone.AI.DTO.RunTestsResponseDTO;
+import com.rupesh.Postman.Clone.AI.DTO.RunTestsResponseDTO.TestResult;
 
 import com.rupesh.Postman.Clone.APIExecution.ApiExecutionService;
 import com.rupesh.Postman.Clone.APIExecution.ApiExecutionResponseDTO;
