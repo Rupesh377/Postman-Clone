@@ -1,6 +1,8 @@
 package com.rupesh.Postman.Clone.APIExecution;
 
 
+import com.rupesh.Postman.Clone.Environment.Environment;
+import com.rupesh.Postman.Clone.Environment.EnvironmentRepository;
 import com.rupesh.Postman.Clone.Exception.AccessDeniedException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.APIRequest.ApiRequest;
@@ -32,22 +34,46 @@ public class ApiExecutionService {
     private final VariableResolver variableResolver;
     private final RequestHistoryService requestHistoryService;
     private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final EnvironmentRepository environmentRepository;
 
     public ApiExecutionResponseDTO execute(Long requestId, Long environmentId, Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("Authentication is required");
+        }
 
         long startTime = System.currentTimeMillis();
         try {
             ApiRequest apiRequest = apiRequestRepository.findById(requestId).orElseThrow(() ->
-                            new ResourceNotFoundException("API Request not found with id: " + requestId));
+                    new ResourceNotFoundException("API Request not found with id: " + requestId));
 
+            Long workspaceId = apiRequest.getCollection().getWorkspace().getId();
+
+            boolean hasAccess = workspaceMemberRepository.existsByWorkspaceIdAndUserEmailIgnoreCase(
+                    workspaceId, authentication.getName());
+
+            if (!hasAccess) {
+                throw new AccessDeniedException("You are not allowed to execute this API request");
+            }
+
+            if (environmentId != null)
+            {
+                Environment environment = environmentRepository.findById(environmentId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Environment not found with id: " + environmentId));
+
+                String environmentOwnerEmail = environment.getOwner().getEmail();
+                if (!environmentOwnerEmail.equalsIgnoreCase(authentication.getName()))
+                {
+                    throw new AccessDeniedException("You are not allowed to access this environment");
+                }
+            }
             String resolvedUrl = variableResolver.resolve(apiRequest.getUrl(), environmentId);
 
             Map<String, String> queryParams = convertJsonToMap(apiRequest.getQueryParams());
 
-            UriComponentsBuilder urlBuilder=UriComponentsBuilder.fromUriString(resolvedUrl);
+            UriComponentsBuilder urlBuilder = UriComponentsBuilder.fromUriString(resolvedUrl);
 
-            if (queryParams != null)
-            {
+            if (queryParams != null) {
                 queryParams.forEach((key, value) -> {
                     String resolvedKey = variableResolver.resolve(key, environmentId);
 
@@ -62,14 +88,13 @@ public class ApiExecutionService {
                     .method(org.springframework.http.HttpMethod.valueOf(apiRequest.getMethod().name()))
                     .uri(resolvedUrl);
 
-            Map<String, String> headers=convertJsonToMap(apiRequest.getHeaders());
+            Map<String, String> headers = convertJsonToMap(apiRequest.getHeaders());
 
-            if (headers != null)
-            {
-                headers.forEach((key,value) -> {
-                    String resolvedKey=variableResolver.resolve(key, environmentId);
+            if (headers != null) {
+                headers.forEach((key, value) -> {
+                    String resolvedKey = variableResolver.resolve(key, environmentId);
 
-                    String resolvedValue=variableResolver.resolve(value, environmentId);
+                    String resolvedValue = variableResolver.resolve(value, environmentId);
                     requestSpec.header(resolvedKey, resolvedValue);
                 });
             }
@@ -82,23 +107,19 @@ public class ApiExecutionService {
                                 ResponseEntity.status(clientResponse.getStatusCode())
                                         .headers(clientResponse.getHeaders())
                                         .body(clientResponse.bodyTo(String.class)));
-            }
-            else
-            {
+            } else {
                 response = requestSpec.exchange((request, clientResponse) ->
                         ResponseEntity.status(clientResponse.getStatusCode())
                                 .headers(clientResponse.getHeaders())
                                 .body(clientResponse.bodyTo(String.class)));
             }
 
-            long responseTime=System.currentTimeMillis() - startTime;
+            long responseTime = System.currentTimeMillis() - startTime;
 
             APIExecution apiExecution = APIExecution.builder()
                     .apiRequest(apiRequest)
                     .statusCode(response.getStatusCode().value())
-                    .responseHeaders(objectMapper.writeValueAsString(
-                            response.getHeaders().toSingleValueMap()
-                    ))
+                    .responseHeaders(objectMapper.writeValueAsString(response.getHeaders().toSingleValueMap()))
                     .responseBody(response.getBody())
                     .responseTime(responseTime)
                     .executedAt(java.time.LocalDateTime.now())
@@ -121,6 +142,9 @@ public class ApiExecutionService {
                     .body(response.getBody())
                     .responseTime(responseTime)
                     .build();
+        } catch (AccessDeniedException | ResourceNotFoundException exception) {
+            throw exception;
+
         } catch (ResourceAccessException exception) {
             long responseTime = System.currentTimeMillis() - startTime;
 
@@ -130,9 +154,9 @@ public class ApiExecutionService {
                     .body("Connection failed or request timed out: " + exception.getMessage())
                     .responseTime(responseTime)
                     .build();
+
         } catch (Exception exception) {
             long responseTime = System.currentTimeMillis() - startTime;
-
             return ApiExecutionResponseDTO.builder()
                     .statusCode(0)
                     .headers(Map.of())
