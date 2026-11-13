@@ -1,13 +1,11 @@
 package com.rupesh.Postman.Clone.Collection;
-
-import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
 
-
-import com.rupesh.Postman.Clone.Exception.ForbiddenException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.Workspace.Workspace;
+import com.rupesh.Postman.Clone.Workspace.WorkspacePermissionService;
 import com.rupesh.Postman.Clone.Workspace.WorkspaceRepository;
+import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMemberRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -19,17 +17,21 @@ public class CollectionService {
     private final CollectionRepository collectionRepository;
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final WorkspacePermissionService workspacePermissionService;
 
     public CollectionService(CollectionRepository collectionRepository, WorkspaceRepository workspaceRepository,
-                             UserRepository userRepository) {
+                             UserRepository userRepository, WorkspaceMemberRepository workspaceMemberRepository, WorkspacePermissionService workspacePermissionService) {
         this.collectionRepository = collectionRepository;
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
+        this.workspaceMemberRepository = workspaceMemberRepository;
+        this.workspacePermissionService = workspacePermissionService;
     }
 
     public CollectionResponseDTO createCollection(Long workspaceId, CollectionRequestDTO request,
-            Authentication authentication) {
-        Workspace workspace = getOwnedWorkspace(workspaceId, authentication);
+                                                  Authentication authentication) {
+        Workspace workspace = getAccessibleWorkspace(workspaceId, authentication , true);
         Collection collection = new Collection();
         collection.setName(request.getName());
         collection.setDescription(request.getDescription());
@@ -42,7 +44,7 @@ public class CollectionService {
 
     public List<CollectionResponseDTO> getCollections(Long workspaceId, Authentication authentication) {
 
-        Workspace workspace = getOwnedWorkspace(workspaceId, authentication);
+        Workspace workspace = getAccessibleWorkspace(workspaceId, authentication , false);
         return collectionRepository.findByWorkspace(workspace)
                 .stream()
                 .map(Mapper::toDTO)
@@ -55,7 +57,7 @@ public class CollectionService {
         Collection collection = collectionRepository.findById(collectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Collection not found"));
 
-        getOwnedWorkspace(collection.getWorkspace().getId(), authentication);
+        getAccessibleWorkspace(collection.getWorkspace().getId(), authentication,false);
         return Mapper.toDTO(collection);
     }
 
@@ -67,7 +69,7 @@ public class CollectionService {
                 .orElseThrow(() -> new  ResourceNotFoundException("Collection not found"));
 
 
-        getOwnedWorkspace(collection.getWorkspace().getId(), authentication);
+        getAccessibleWorkspace(collection.getWorkspace().getId(), authentication , true);
         collection.setName(request.getName());
         collection.setDescription(request.getDescription());
         Collection updatedCollection = collectionRepository.save(collection);
@@ -80,23 +82,21 @@ public class CollectionService {
 
         Collection collection = collectionRepository.findById(collectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Collection not found"));
-        getOwnedWorkspace(collection.getWorkspace().getId(), authentication);
+        getAccessibleWorkspace(collection.getWorkspace().getId(), authentication , true);
         collectionRepository.delete(collection);
 
     }
 
 
-    private Workspace getOwnedWorkspace(Long workspaceId, Authentication authentication) {
-
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    private Workspace getAccessibleWorkspace(Long workspaceId, Authentication authentication, boolean editRequired) {
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-        if (!workspace.getOwner().getId().equals(user.getId())) {
-            throw new ForbiddenException("You are not the owner of this workspace.");
+        if (editRequired) {
+            workspacePermissionService.checkEditAccess(workspace, authentication);
+        } else {
+            workspacePermissionService.checkViewAccess(workspace, authentication);
         }
         return workspace;
     }

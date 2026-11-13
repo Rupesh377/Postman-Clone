@@ -2,6 +2,7 @@ package com.rupesh.Postman.Clone.WorkspaceMember;
 
 import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
+import com.rupesh.Postman.Clone.Exception.AccessDeniedException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.Workspace.Workspace;
 import com.rupesh.Postman.Clone.Workspace.WorkspaceRepository;
@@ -72,8 +73,9 @@ public class WorkspaceMemberService {
         Workspace workspace = getWorkspace(workspaceId);
         User currentUser = getCurrentUser(authentication);
         checkOwnerPermission(workspace, currentUser);
-        WorkspaceMember member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
+
+        WorkspaceMember member = memberRepository.findByIdAndWorkspaceId(memberId, workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found in this workspace"));
 
         if (!member.getWorkspace().getId().equals(workspaceId)) {
             throw new IllegalArgumentException("Member does not belong to this workspace");
@@ -98,8 +100,13 @@ public class WorkspaceMemberService {
         Workspace workspace = getWorkspace(workspaceId);
         User currentUser = getCurrentUser(authentication);
         checkAdminPermission(workspace, currentUser);
-        WorkspaceMember member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
+
+        WorkspaceMember member = memberRepository.findByIdAndWorkspaceId(memberId, workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found in this workspace"));
+
+        if (member.getRole() == WorkspaceRole.ADMIN && !workspace.getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Admins cannot remove other admins");
+        }
 
         if (!member.getWorkspace().getId().equals(workspaceId)) {
             throw new IllegalArgumentException("Member does not belong to this workspace");
@@ -118,7 +125,13 @@ public class WorkspaceMemberService {
     }
 
     private User getCurrentUser(Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("Authentication is required");
+        }
+
         String email = authentication.getName();
+
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
@@ -157,4 +170,6 @@ public class WorkspaceMemberService {
             throw new SecurityException("You do not have access to this workspace");
         }
     }
+
+
 }

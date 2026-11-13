@@ -5,6 +5,7 @@ import com.rupesh.Postman.Clone.Environment.EnvironmentVariable.EnvironmentVaria
 import com.rupesh.Postman.Clone.Environment.EnvironmentVariable.EnvironmentVariableRepository;
 import com.rupesh.Postman.Clone.Environment.EnvironmentVariable.EnvironmentVariableRequestDTO;
 import com.rupesh.Postman.Clone.Environment.EnvironmentVariable.EnvironmentVariableResponseDTO;
+import com.rupesh.Postman.Clone.Exception.AccessDeniedException;
 import com.rupesh.Postman.Clone.Exception.DuplicateResourceException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -81,23 +82,26 @@ public class EnvironmentService {
     }
 
     @Transactional
-    public EnvironmentVariableResponseDTO updateVariable(Long environmentId, Long variableId,
-                           EnvironmentVariableRequestDTO request, Authentication authentication) {
+    public EnvironmentVariableResponseDTO updateVariable(Long environmentId, Long variableId, EnvironmentVariableRequestDTO request,
+            Authentication authentication) {
 
         User user = getUser(authentication);
-
         Environment environment = environmentRepository.findByIdAndOwner(environmentId, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Environment not found"));
 
         EnvironmentVariable variable = variableRepository.findByIdAndEnvironmentId(variableId, environmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Variable not found"));
 
+        boolean duplicateKey = variableRepository.existsByVariableKeyAndEnvironmentId(request.getVariableKey(), environmentId);
+
+        if (duplicateKey && !variable.getVariableKey().equals(request.getVariableKey())) {
+            throw new DuplicateResourceException("Variable with this key already exists");
+        }
         variable.setVariableKey(request.getVariableKey());
         variable.setVariableValue(request.getVariableValue());
-
-        variableRepository.save(variable);
         return mapVariableToResponse(variable);
     }
+
 
     @Transactional
     public void deleteVariable(Long environmentId, Long variableId, Authentication authentication) {
@@ -123,6 +127,9 @@ public class EnvironmentService {
 
     private User getUser(Authentication authentication) {
 
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("Authentication is required");
+        }
         String email = authentication.getName();
         return userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }

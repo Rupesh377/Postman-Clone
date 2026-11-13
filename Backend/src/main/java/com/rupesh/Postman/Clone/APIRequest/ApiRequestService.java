@@ -1,12 +1,15 @@
+
 package com.rupesh.Postman.Clone.APIRequest;
-import com.rupesh.Postman.Clone.Authentication.Entity.User;
-import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
+
 import com.rupesh.Postman.Clone.Collection.Collection;
 import com.rupesh.Postman.Clone.Collection.CollectionRepository;
 import com.rupesh.Postman.Clone.Exception.BadRequestException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.Folder.Folder;
 import com.rupesh.Postman.Clone.Folder.FolderRepository;
+import com.rupesh.Postman.Clone.Workspace.Workspace;
+import com.rupesh.Postman.Clone.Workspace.WorkspacePermissionService;
+import com.rupesh.Postman.Clone.Workspace.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -20,30 +23,26 @@ public class ApiRequestService {
     private final ApiRequestRepository apiRequestRepository;
     private final CollectionRepository collectionRepository;
     private final FolderRepository folderRepository;
-    private final UserRepository userRepository;
+    private final WorkspaceRepository workspaceRepository;
+    private final WorkspacePermissionService workspacePermissionService;
 
 
-    public ApiRequestResponseDTO createApiRequest(Long collectionId, ApiRequestRequestDTO request,
-            Authentication authentication) {
+    public ApiRequestResponseDTO createApiRequest(Long collectionId, ApiRequestRequestDTO request, Authentication authentication) {
 
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Collection collection = collectionRepository.findById(collectionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Collection not found"));
 
-        Collection collection = collectionRepository.findById(collectionId).orElseThrow(
-                () -> new ResourceNotFoundException("Collection not found"));
-        validateCollectionAccess(collection, user);
+        validateCollectionAccess(collection, authentication, true);
         Folder folder = null;
-
-        if (request.getFolderId() !=null)
-        {
-            folder = folderRepository.findById(request.getFolderId()).orElseThrow(
-                    () -> new ResourceNotFoundException("Folder not found"));
-
-            if (!folder.getCollection().getId().equals(collectionId))
+        if (request.getFolderId() != null) {
+            folder = folderRepository.findById(request.getFolderId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Folder not found"));
+            if (!folder.getCollection().getId().equals(collectionId)) {
                 throw new BadRequestException("Folder does not belong to this collection");
+            }
         }
-
         ApiRequest apiRequest = new ApiRequest();
+
         apiRequest.setName(request.getName());
         apiRequest.setMethod(request.getMethod());
         apiRequest.setUrl(request.getUrl());
@@ -53,58 +52,56 @@ public class ApiRequestService {
         apiRequest.setCollection(collection);
         apiRequest.setFolder(folder);
 
-        ApiRequest savedRequest =apiRequestRepository.save(apiRequest);
+        ApiRequest savedRequest = apiRequestRepository.save(apiRequest);
 
         return mapToResponseDTO(savedRequest);
     }
 
+
     public List<ApiRequestResponseDTO> getRequestsByCollection(Long collectionId, Authentication authentication) {
 
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Collection collection = collectionRepository.findById(collectionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Collection not found"));
 
-        Collection collection = collectionRepository.findById(collectionId).orElseThrow(
-                        () -> new ResourceNotFoundException("Collection not found"));
-        validateCollectionAccess(collection, user);
+        validateCollectionAccess(collection, authentication, false);
 
-        return apiRequestRepository.findByCollectionId(collectionId).stream()
-                .map(this::mapToResponseDTO).toList();
+        return apiRequestRepository.findByCollectionId(collectionId)
+                .stream()
+                .map(this::mapToResponseDTO)
+                .toList();
     }
 
 
     public List<ApiRequestResponseDTO> getRequestsByFolder(Long folderId, Authentication authentication) {
 
-        String email = authentication.getName();
-        User user =userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("User not found"));
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Folder not found"));
+        validateCollectionAccess(folder.getCollection(), authentication, false);
 
-        Folder folder=folderRepository.findById(folderId).orElseThrow(()->new ResourceNotFoundException("Folder not found"));
-        validateCollectionAccess(folder.getCollection(), user);
-
-        return apiRequestRepository.findByFolderId(folderId).stream().map(this::mapToResponseDTO).toList();
+        return apiRequestRepository.findByFolderId(folderId)
+                .stream()
+                .map(this::mapToResponseDTO)
+                .toList();
     }
 
+
     public ApiRequestResponseDTO getApiRequestById(Long requestId, Authentication authentication) {
-        String email = authentication.getName();
 
-        User user =userRepository.findByEmail(email).orElseThrow(() ->new ResourceNotFoundException("User not found"));
+        ApiRequest apiRequest = apiRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("API Request not found"));
 
-        ApiRequest apiRequest = apiRequestRepository.findById(requestId).orElseThrow(
-                ()->new ResourceNotFoundException("API Request not found"));
+        validateCollectionAccess(apiRequest.getCollection(), authentication, false);
 
-        validateCollectionAccess(apiRequest.getCollection(), user);
         return mapToResponseDTO(apiRequest);
     }
 
-    public ApiRequestResponseDTO updateApiRequest(Long requestId,ApiRequestRequestDTO request,
-                                                  Authentication authentication) {
 
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("User not found"));
+    public ApiRequestResponseDTO updateApiRequest(Long requestId, ApiRequestRequestDTO request, Authentication authentication) {
 
-        ApiRequest apiRequest = apiRequestRepository.findById(requestId).orElseThrow(
-                ()->new ResourceNotFoundException("API Request not found"));
-        validateCollectionAccess(apiRequest.getCollection(), user);
+        ApiRequest apiRequest = apiRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("API Request not found"));
 
+        validateCollectionAccess(apiRequest.getCollection(), authentication, true);
 
         apiRequest.setName(request.getName());
         apiRequest.setMethod(request.getMethod());
@@ -113,42 +110,53 @@ public class ApiRequestService {
         apiRequest.setQueryParams(request.getQueryParams());
         apiRequest.setBody(request.getBody());
 
-        if (request.getFolderId() != null)
-        {
-            Folder folder = folderRepository.findById(request.getFolderId()).orElseThrow(()->
-                            new ResourceNotFoundException("Folder not found"));
+        if (request.getFolderId() != null) {
 
-            if (!folder.getCollection().getId().equals(apiRequest.getCollection().getId()))
-            {
-                throw new BadRequestException("Folder does not belong to the same collection");
+            Folder folder = folderRepository.findById(request.getFolderId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Folder not found"));
+
+            if (!folder.getCollection().getId()
+                    .equals(apiRequest.getCollection().getId())) {
+
+                throw new BadRequestException(
+                        "Folder does not belong to the same collection");
             }
+
             apiRequest.setFolder(folder);
+
         } else {
             apiRequest.setFolder(null);
         }
+
         ApiRequest updatedRequest = apiRequestRepository.save(apiRequest);
+
         return mapToResponseDTO(updatedRequest);
     }
 
 
     public void deleteApiRequest(Long requestId, Authentication authentication) {
 
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("User not found"));
-
         ApiRequest apiRequest = apiRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("API Request not found"));
 
-        validateCollectionAccess(apiRequest.getCollection(), user);
+        validateCollectionAccess(apiRequest.getCollection(), authentication, true);
 
         apiRequestRepository.delete(apiRequest);
     }
 
 
-    private void validateCollectionAccess(Collection collection, User user)
-    {
-        if (!collection.getWorkspace().getOwner().getId().equals(user.getId()))
-            throw new BadRequestException("You do not have access to this collection");
+    private void validateCollectionAccess(Collection collection, Authentication authentication, boolean editRequired) {
+
+        Long workspaceId = collection.getWorkspace().getId();
+
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+
+        if (editRequired) {
+            workspacePermissionService.checkEditAccess(workspace, authentication);
+        } else {
+            workspacePermissionService.checkViewAccess(workspace, authentication);
+        }
     }
 
 
@@ -163,6 +171,7 @@ public class ApiRequestService {
                 apiRequest.getQueryParams(),
                 apiRequest.getBody(),
                 apiRequest.getCollection().getId(),
-                apiRequest.getFolder() != null ? apiRequest.getFolder().getId() : null);
+                apiRequest.getFolder() != null ? apiRequest.getFolder().getId() : null
+        );
     }
 }
