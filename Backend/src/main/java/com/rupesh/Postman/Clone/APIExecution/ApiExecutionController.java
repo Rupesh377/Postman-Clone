@@ -27,9 +27,9 @@ public class ApiExecutionController {
 
 
     @GetMapping("/{requestId}/history")
-    public ResponseEntity<List<ApiExecutionResponseDTO>> getExecutionHistory(@PathVariable Long requestId) {
+    public ResponseEntity<List<ApiExecutionResponseDTO>> getExecutionHistory(@PathVariable Long requestId, Authentication authentication) {
 
-        return ResponseEntity.ok(apiExecutionService.getExecutionHistory(requestId));
+        return ResponseEntity.ok(apiExecutionService.getExecutionHistory(requestId, authentication));
     }
 
 }
