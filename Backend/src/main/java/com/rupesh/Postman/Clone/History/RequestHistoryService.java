@@ -3,6 +3,8 @@ package com.rupesh.Postman.Clone.History;
 import com.rupesh.Postman.Clone.APIRequest.HttpMethod;
 import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
+import com.rupesh.Postman.Clone.Exception.AccessDeniedException;
+import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -52,11 +54,11 @@ public class RequestHistoryService {
         public RequestHistoryResponseDTO getHistoryById(Long historyId, Authentication authentication) {
             User user = getLoggedInUser(authentication);
             RequestHistory history = requestHistoryRepository.findById(historyId).orElseThrow(()
-                    -> new RuntimeException("History not found"));
+                    -> new ResourceNotFoundException("History not found"));
 
 
             if (!history.getUser().getId().equals(user.getId())) {
-                throw new RuntimeException("You are not allowed to access this history");
+                throw new AccessDeniedException("You are not allowed to access this history");
             }
             return convertToDTO(history);
         }
@@ -65,10 +67,10 @@ public class RequestHistoryService {
 
             User user = getLoggedInUser(authentication);
             RequestHistory history = requestHistoryRepository.findById(historyId)
-                            .orElseThrow(() -> new RuntimeException("History not found"));
+                            .orElseThrow(() -> new ResourceNotFoundException("History not found"));
 
             if (!history.getUser().getId().equals(user.getId())) {
-                throw new RuntimeException("You are not allowed to delete this history");
+                throw new AccessDeniedException("You are not allowed to delete this history");
             }
             requestHistoryRepository.delete(history);
         }

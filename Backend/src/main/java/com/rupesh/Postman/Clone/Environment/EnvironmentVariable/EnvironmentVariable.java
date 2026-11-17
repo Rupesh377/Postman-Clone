@@ -1,3 +1,4 @@
+
 package com.rupesh.Postman.Clone.Environment.EnvironmentVariable;
 
 import com.rupesh.Postman.Clone.Environment.Environment;
@@ -5,7 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "environment_variables")
+@Table(name = "environment_variables", uniqueConstraints = {
+                @UniqueConstraint(name = "uk_environment_variable_key", columnNames = {"environment_id", "variable_key"})})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,10 +19,10 @@ public class EnvironmentVariable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "variable_key", nullable = false)
     private String variableKey;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "variable_value", nullable = false, columnDefinition = "TEXT")
     private String variableValue;
 
     @ManyToOne(fetch = FetchType.LAZY)

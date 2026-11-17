@@ -2,6 +2,8 @@ package com.rupesh.Postman.Clone.Environment.EnvironmentVariable;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 public interface EnvironmentVariableRepository extends JpaRepository<EnvironmentVariable, Long> {
@@ -11,4 +13,6 @@ public interface EnvironmentVariableRepository extends JpaRepository<Environment
     Optional<EnvironmentVariable> findByVariableKeyAndEnvironmentId(String variableKey, Long environmentId);
 
     boolean existsByVariableKeyAndEnvironmentId(String variableKey, Long environmentId);
+
+    List<EnvironmentVariable> findByEnvironmentId(Long environmentId);
 }

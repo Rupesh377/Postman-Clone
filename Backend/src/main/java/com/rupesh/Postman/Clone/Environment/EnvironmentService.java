@@ -1,4 +1,6 @@
+
 package com.rupesh.Postman.Clone.Environment;
+
 import com.rupesh.Postman.Clone.Authentication.Entity.User;
 import com.rupesh.Postman.Clone.Authentication.Repository.UserRepository;
 import com.rupesh.Postman.Clone.Environment.EnvironmentVariable.EnvironmentVariable;
@@ -7,7 +9,10 @@ import com.rupesh.Postman.Clone.Environment.EnvironmentVariable.EnvironmentVaria
 import com.rupesh.Postman.Clone.Environment.EnvironmentVariable.EnvironmentVariableResponseDTO;
 import com.rupesh.Postman.Clone.Exception.DuplicateResourceException;
 import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
+
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +31,7 @@ public class EnvironmentService {
     public EnvironmentResponseDTO createEnvironment(EnvironmentRequestDTO request, Authentication authentication) {
 
         User user = getUser(authentication);
+
         if (environmentRepository.existsByNameAndOwner(request.getName(), user)) {
             throw new DuplicateResourceException("Environment with this name already exists");
         }
@@ -39,6 +45,8 @@ public class EnvironmentService {
         return mapToResponse(environment);
     }
 
+
+    @Transactional(readOnly = true)
     public List<EnvironmentResponseDTO> getMyEnvironments(Authentication authentication) {
 
         User user = getUser(authentication);
@@ -48,22 +56,23 @@ public class EnvironmentService {
                 .toList();
     }
 
+
+    @Transactional(readOnly = true)
     public EnvironmentResponseDTO getEnvironment(Long environmentId, Authentication authentication) {
 
         User user = getUser(authentication);
         Environment environment = environmentRepository.findByIdAndOwner(environmentId, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Environment not found"));
-
         return mapToResponse(environment);
     }
 
     @Transactional
-    public EnvironmentVariableResponseDTO addVariable(Long environmentId,
-                                                      EnvironmentVariableRequestDTO request, Authentication authentication) {
+    public EnvironmentVariableResponseDTO addVariable(Long environmentId, EnvironmentVariableRequestDTO request,
+            Authentication authentication) {
 
         User user = getUser(authentication);
-
-        Environment environment = environmentRepository.findByIdAndOwner(environmentId, user)
+        Environment environment = environmentRepository
+                .findByIdAndOwner(environmentId, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Environment not found"));
 
         if (variableRepository.existsByVariableKeyAndEnvironmentId(request.getVariableKey(), environmentId)) {
@@ -81,21 +90,27 @@ public class EnvironmentService {
     }
 
     @Transactional
-    public EnvironmentVariableResponseDTO updateVariable(Long environmentId, Long variableId,
-                           EnvironmentVariableRequestDTO request, Authentication authentication) {
+    public EnvironmentVariableResponseDTO updateVariable(Long environmentId, Long variableId, EnvironmentVariableRequestDTO request,
+            Authentication authentication) {
 
         User user = getUser(authentication);
-
-        Environment environment = environmentRepository.findByIdAndOwner(environmentId, user)
-                .orElseThrow(() -> new ResourceNotFoundException("Environment not found"));
+        environmentRepository.findByIdAndOwner(environmentId, user).orElseThrow(() ->
+                        new ResourceNotFoundException("Environment not found"));
 
         EnvironmentVariable variable = variableRepository.findByIdAndEnvironmentId(variableId, environmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Variable not found"));
 
+        boolean duplicateKey = variableRepository.existsByVariableKeyAndEnvironmentId(
+                        request.getVariableKey(), environmentId);
+
+        if (duplicateKey && !variable.getVariableKey().equals(request.getVariableKey())) {
+
+            throw new DuplicateResourceException("Variable with this key already exists");
+        }
+
         variable.setVariableKey(request.getVariableKey());
         variable.setVariableValue(request.getVariableValue());
 
-        variableRepository.save(variable);
         return mapVariableToResponse(variable);
     }
 
@@ -103,8 +118,8 @@ public class EnvironmentService {
     public void deleteVariable(Long environmentId, Long variableId, Authentication authentication) {
 
         User user = getUser(authentication);
-        environmentRepository.findByIdAndOwner(environmentId, user)
-                .orElseThrow(() -> new ResourceNotFoundException("Environment not found"));
+        environmentRepository.findByIdAndOwner(environmentId, user).orElseThrow(() ->
+                        new ResourceNotFoundException("Environment not found"));
 
         EnvironmentVariable variable = variableRepository.findByIdAndEnvironmentId(variableId, environmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Variable not found"));
@@ -115,22 +130,24 @@ public class EnvironmentService {
     public void deleteEnvironment(Long environmentId, Authentication authentication) {
 
         User user = getUser(authentication);
-        Environment environment = environmentRepository.findByIdAndOwner(environmentId, user)
-                .orElseThrow(() -> new ResourceNotFoundException("Environment not found"));
-
+        Environment environment = environmentRepository.findByIdAndOwner(environmentId, user).orElseThrow(() ->
+                        new ResourceNotFoundException("Environment not found"));
         environmentRepository.delete(environment);
     }
 
     private User getUser(Authentication authentication) {
 
-        String email = authentication.getName();
-        return userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("Authentication is required");
+        }
+
+        return userRepository.findByEmail(authentication.getName()).orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
     }
 
     private EnvironmentResponseDTO mapToResponse(Environment environment) {
 
-        List<EnvironmentVariableResponseDTO> variables =
-                environment.getVariables()
+        List<EnvironmentVariableResponseDTO> variables = environment.getVariables()
                         .stream()
                         .map(this::mapVariableToResponse)
                         .toList();

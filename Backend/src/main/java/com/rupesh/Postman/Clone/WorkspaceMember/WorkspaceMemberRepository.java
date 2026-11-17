@@ -6,10 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember, Long> {
 
     List<WorkspaceMember> findByWorkspace(Workspace workspace);
+
+    Optional<WorkspaceMember> findByIdAndWorkspaceId(Long memberId, Long workspaceId);
 
     Optional<WorkspaceMember> findByWorkspaceAndUser(Workspace workspace, User user);
 
@@ -19,4 +22,7 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
 
     List<WorkspaceMember> findByUser(User user);
 
+    boolean existsByWorkspaceIdAndUserEmailIgnoreCase(Long workspaceId, String email);
+
+    boolean existsByWorkspaceIdAndUserId(Long workspaceId, UUID userId);
 }

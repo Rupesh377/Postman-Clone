@@ -1,4 +1,4 @@
-package com.rupesh.Postman.Clone.AI;
+package com.rupesh.Postman.Clone.AI.DTO;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -45,4 +45,3 @@ public class ExplainResponseRequestDTO {
         this.responseHeaders = responseHeaders;
     }
 }
-

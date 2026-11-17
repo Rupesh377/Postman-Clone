@@ -3,6 +3,7 @@ package com.rupesh.Postman.Clone.Authentication.Controller;
 import com.rupesh.Postman.Clone.Authentication.DTO.*;
 import com.rupesh.Postman.Clone.Authentication.Security.CustomUserDetails;
 import com.rupesh.Postman.Clone.Authentication.Service.AuthService;
+import com.rupesh.Postman.Clone.Authentication.Service.EmailVerificationService;
 import com.rupesh.Postman.Clone.Authentication.Service.ForgetPasswordService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final ForgetPasswordService forgetPasswordService;
+    private final EmailVerificationService emailVerificationService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -55,5 +59,13 @@ public class AuthController {
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         forgetPasswordService.resetPassword(request);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+
+        emailVerificationService.resendVerificationEmail(request.getEmail());
+
+        return ResponseEntity.ok(Map.of("message", "If the account is eligible, a verification email will be sent."));
     }
 }

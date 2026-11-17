@@ -1,5 +1,7 @@
 package com.rupesh.Postman.Clone.APIExecution;
 
+import com.rupesh.Postman.Clone.AI.DTO.ExplainResponseRequestDTO;
+import com.rupesh.Postman.Clone.AI.DTO.ExplainResponseResponseDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -25,8 +27,9 @@ public class ApiExecutionController {
 
 
     @GetMapping("/{requestId}/history")
-    public ResponseEntity<List<ApiExecutionResponseDTO>> getExecutionHistory(@PathVariable Long requestId) {
+    public ResponseEntity<List<ApiExecutionResponseDTO>> getExecutionHistory(@PathVariable Long requestId, Authentication authentication) {
 
-        return ResponseEntity.ok(apiExecutionService.getExecutionHistory(requestId));
+        return ResponseEntity.ok(apiExecutionService.getExecutionHistory(requestId, authentication));
     }
+
 }

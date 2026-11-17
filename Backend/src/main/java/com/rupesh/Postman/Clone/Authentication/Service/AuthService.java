@@ -18,7 +18,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -68,16 +67,22 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
 
-
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(()->new ResourceNotFoundException("User not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
         if (user.getProvider() != AuthProvider.LOCAL) {
             throw new BadRequestException("Please login using " + user.getProvider());
         }
+
+        if (!user.isEmailVerified()) {
+            throw new BadRequestException("Please verify your email before logging in.");
+        }
+
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()));
         } catch (BadCredentialsException e) {
             throw new BadRequestException("Invalid email or password");
         }
@@ -85,6 +90,7 @@ public class AuthService {
         refreshTokenRepository.deleteByUser(user);
 
         String accessToken = jwtService.generateAccessToken(user);
+
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -104,8 +110,15 @@ public class AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
 
         RefreshToken refreshToken = refreshTokenService.verifyRefreshToken(request.getRefreshToken());
+
         User user = refreshToken.getUser();
+
+        if (!user.isEmailVerified()) {
+            throw new BadRequestException("Please verify your email before refreshing tokens.");
+        }
+
         String accessToken = jwtService.generateAccessToken(user);
+
         RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()

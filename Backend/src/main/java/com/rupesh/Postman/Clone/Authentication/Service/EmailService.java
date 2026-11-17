@@ -11,6 +11,19 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
+    public void sendVerificationEmail(String to,String name, String link) {
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(to);
+        message.setSubject("Verify Your Email");
+
+        message.setText("Welcome to Postman Clone!\n\n" +
+                "Click this link to verify your email:\n" + link);
+
+        mailSender.send(message);
+    }
+
     public void sendPasswordResetEmail(String email, String link) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);

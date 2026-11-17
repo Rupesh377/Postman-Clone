@@ -1,6 +1,9 @@
 package com.rupesh.Postman.Clone.AI;
 
-import com.rupesh.Postman.Clone.AI.RunTestsResponseDTO.TestResult;
+import com.rupesh.Postman.Clone.AI.DTO.GenerateTestsResponseDTO;
+import com.rupesh.Postman.Clone.AI.DTO.RunTestsRequestDTO;
+import com.rupesh.Postman.Clone.AI.DTO.RunTestsResponseDTO;
+import com.rupesh.Postman.Clone.AI.DTO.RunTestsResponseDTO.TestResult;
 
 import com.rupesh.Postman.Clone.APIExecution.ApiExecutionService;
 import com.rupesh.Postman.Clone.APIExecution.ApiExecutionResponseDTO;
@@ -153,6 +156,7 @@ public class ApiTestRunnerService {
     }
 
 
+
     public RunTestsRequestDTO convertToRunTestsRequest(GenerateTestsResponseDTO generatedTests) {
 
         RunTestsRequestDTO request = new RunTestsRequestDTO();
@@ -164,30 +168,21 @@ public class ApiTestRunnerService {
 
             assertion.setDescription(testCase.getName() + ": " + testCase.getDescription());
 
-            String testType = testCase.getTestType().trim().toUpperCase().replaceAll("[\\s-]+", "_");
+            assertion.setType(RunTestsRequestDTO.AssertionType.valueOf(testCase.getTestType()));
 
-            switch (testType) {
-                case "STATUS_CODE":
-                case "STATUS_CODE_EQUALS":
-                case "STATUS":
-                    assertion.setType(RunTestsRequestDTO.AssertionType.STATUS_CODE_EQUALS);
+            assertion.setExpectedStatusCode(testCase.getExpectedStatusCode());
 
-                    assertion.setExpectedStatusCode(Integer.parseInt(testCase.getExpectedResult().trim()));
-                    break;
+            assertion.setJsonPath(testCase.getJsonPath());
 
-                case "RESPONSE_TIME":
-                case "RESPONSE_TIME_LESS_THAN_MS":
-                    assertion.setType(RunTestsRequestDTO.AssertionType.RESPONSE_TIME_LESS_THAN_MS);
+            assertion.setExpectedValue(testCase.getExpectedValue());
 
-                    assertion.setMaxResponseTimeMs(Long.parseLong(testCase.getExpectedResult().trim()));
-                    break;
+            assertion.setHeaderName(testCase.getHeaderName());
 
-                default:
-                    throw new IllegalArgumentException("Unsupported generated test type: " + testCase.getTestType());
-            }
+            assertion.setMaxResponseTimeMs(testCase.getMaxResponseTimeMs());
             assertions.add(assertion);
         }
         request.setAssertions(assertions);
         return request;
     }
+
 }
