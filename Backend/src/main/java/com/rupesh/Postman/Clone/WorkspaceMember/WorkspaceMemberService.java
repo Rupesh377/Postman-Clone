@@ -11,7 +11,9 @@ import com.rupesh.Postman.Clone.Workspace.WorkspacePermissionService;
 import com.rupesh.Postman.Clone.Workspace.WorkspaceRepository;
 import com.rupesh.Postman.Clone.WorkspaceMember.DTO.InviteMemberRequestDTO;
 import com.rupesh.Postman.Clone.WorkspaceMember.DTO.MemberResponseDTO;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -28,7 +30,7 @@ public class WorkspaceMemberService {
     private final UserRepository userRepository;
     private final WorkspacePermissionService workspacePermissionService;
 
-
+    // Invite a new member
     @Transactional
     public MemberResponseDTO inviteMember(Long workspaceId, InviteMemberRequestDTO request, Authentication authentication) {
 
@@ -47,6 +49,12 @@ public class WorkspaceMemberService {
             throw new BadRequestException("Cannot assign OWNER role");
         }
 
+        WorkspaceRole currentUserRole = workspacePermissionService.getUserRole(workspace, authentication);
+
+        if (request.getRole() == WorkspaceRole.ADMIN && currentUserRole != WorkspaceRole.OWNER) {
+            throw new AccessDeniedException("Only the workspace owner can invite an ADMIN");
+        }
+
         WorkspaceMember member = new WorkspaceMember();
         member.setWorkspace(workspace);
         member.setUser(invitedUser);
@@ -58,12 +66,12 @@ public class WorkspaceMemberService {
     }
 
 
+    @Transactional(readOnly = true)
     public List<MemberResponseDTO> getMembers(Long workspaceId, Authentication authentication) {
 
         Workspace workspace = getWorkspace(workspaceId);
 
         workspacePermissionService.checkViewAccess(workspace, authentication);
-
         return memberRepository.findByWorkspace(workspace)
                 .stream()
                 .map(Mapper::toDTO)
@@ -77,7 +85,6 @@ public class WorkspaceMemberService {
         Workspace workspace = getWorkspace(workspaceId);
 
         workspacePermissionService.checkOwnerAccess(workspace, authentication);
-
         WorkspaceMember member = memberRepository.findByIdAndWorkspaceId(memberId, workspaceId).orElseThrow(() ->
                         new ResourceNotFoundException("Member not found in this workspace"));
 
@@ -96,16 +103,14 @@ public class WorkspaceMemberService {
         return Mapper.toDTO(updatedMember);
     }
 
-
     @Transactional
     public void removeMember(Long workspaceId, Long memberId, Authentication authentication) {
 
         Workspace workspace = getWorkspace(workspaceId);
-
         workspacePermissionService.checkAdminAccess(workspace, authentication);
 
-        WorkspaceMember member = memberRepository.findByIdAndWorkspaceId(memberId, workspaceId).orElseThrow(() ->
-                        new ResourceNotFoundException("Member not found in this workspace"));
+        WorkspaceMember member = memberRepository.findByIdAndWorkspaceId(memberId, workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found in this workspace"));
 
         if (member.getRole() == WorkspaceRole.OWNER) {
             throw new BadRequestException("Workspace owner cannot be removed");
@@ -114,15 +119,20 @@ public class WorkspaceMemberService {
         WorkspaceRole currentUserRole = workspacePermissionService.getUserRole(workspace, authentication);
 
         if (member.getRole() == WorkspaceRole.ADMIN && currentUserRole != WorkspaceRole.OWNER) {
-
             throw new AccessDeniedException("Admins cannot remove other admins");
         }
+
+        User currentUser = userRepository.findByEmail(authentication.getName()).orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        if (member.getUser().getId().equals(currentUser.getId())) {
+            throw new BadRequestException("You cannot remove yourself from the workspace");
+        }
+
         memberRepository.delete(member);
     }
 
-
     private Workspace getWorkspace(Long workspaceId) {
-
         return workspaceRepository.findById(workspaceId).orElseThrow(
                 () -> new ResourceNotFoundException("Workspace not found"));
     }

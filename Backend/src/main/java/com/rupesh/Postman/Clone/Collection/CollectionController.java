@@ -1,6 +1,7 @@
 package com.rupesh.Postman.Clone.Collection;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -10,13 +11,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class CollectionController {
 
     private final CollectionService collectionService;
 
-    public CollectionController(CollectionService collectionService) {
-        this.collectionService = collectionService;
-    }
 
     @PostMapping("/workspaces/{workspaceId}/collections")
     public ResponseEntity<CollectionResponseDTO> createCollection(@PathVariable Long workspaceId,

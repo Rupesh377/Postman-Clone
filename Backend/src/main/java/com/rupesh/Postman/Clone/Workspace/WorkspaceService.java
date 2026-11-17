@@ -8,8 +8,11 @@ import com.rupesh.Postman.Clone.Exception.ResourceNotFoundException;
 import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMember;
 import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceMemberRepository;
 import com.rupesh.Postman.Clone.WorkspaceMember.WorkspaceRole;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +28,6 @@ public class WorkspaceService {
     private final UserRepository userRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final WorkspacePermissionService workspacePermissionService;
-
 
     @Transactional
     public WorkspaceResponseDTO createWorkspace(WorkspaceRequestDTO request, Authentication authentication) {
@@ -51,10 +53,10 @@ public class WorkspaceService {
     }
 
 
+    @Transactional(readOnly = true)
     public List<WorkspaceResponseDTO> getMyWorkspaces(Authentication authentication) {
 
         User user = getCurrentUser(authentication);
-
         List<Workspace> ownedWorkspaces = workspaceRepository.findByOwner(user);
 
         List<Workspace> memberWorkspaces = workspaceMemberRepository.findByUser(user)
@@ -68,17 +70,16 @@ public class WorkspaceService {
                 .toList();
     }
 
-
+    @Transactional(readOnly = true)
     public WorkspaceResponseDTO getWorkspace(Long workspaceId, Authentication authentication) {
 
-        Workspace workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+        Workspace workspace = workspaceRepository.findById(workspaceId).orElseThrow(() ->
+                        new ResourceNotFoundException("Workspace not found"));
 
         workspacePermissionService.checkViewAccess(workspace, authentication);
 
         return Mapper.toDTO(workspace);
     }
-
 
     @Transactional
     public WorkspaceResponseDTO updateWorkspace(Long workspaceId, WorkspaceRequestDTO request, Authentication authentication) {
@@ -88,34 +89,36 @@ public class WorkspaceService {
 
         workspacePermissionService.checkAdminAccess(workspace, authentication);
 
+        if (!workspace.getName().equals(request.getName()) && workspaceRepository.existsByOwnerAndName(
+                        workspace.getOwner(), request.getName())) {
+            throw new DuplicateResourceException("Workspace with same name already exists. Try with a new name.");
+        }
+
         workspace.setName(request.getName());
         workspace.setDescription(request.getDescription());
         workspace.setVisibility(request.getVisibility());
 
         Workspace updatedWorkspace = workspaceRepository.save(workspace);
-
         return Mapper.toDTO(updatedWorkspace);
     }
 
     @Transactional
     public void deleteWorkspace(Long workspaceId, Authentication authentication) {
 
-        Workspace workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
-
+        Workspace workspace = workspaceRepository.findById(workspaceId).orElseThrow(() ->
+                        new ResourceNotFoundException("Workspace not found"));
         workspacePermissionService.checkOwnerAccess(workspace, authentication);
-
         workspaceRepository.delete(workspace);
     }
 
-
     private User getCurrentUser(Authentication authentication) {
 
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (authentication == null || !authentication.isAuthenticated() ||
+                authentication instanceof AnonymousAuthenticationToken) {
             throw new AccessDeniedException("Authentication is required");
         }
 
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return userRepository.findByEmail(authentication.getName()).orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
     }
 }

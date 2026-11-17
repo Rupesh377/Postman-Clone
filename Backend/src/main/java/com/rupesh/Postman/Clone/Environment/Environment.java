@@ -9,7 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "environments")
+@Table(name = "environments", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_environment_user_name", columnNames = {"user_id", "name"})})
 @Getter
 @Setter
 @NoArgsConstructor

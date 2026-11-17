@@ -1,4 +1,6 @@
+
 package com.rupesh.Postman.Clone.AI.DTO;
+
 import java.util.List;
 
 public class GenerateTestsResponseDTO {
@@ -25,16 +27,28 @@ public class GenerateTestsResponseDTO {
         private String name;
         private String description;
         private String testType;
-        private String expectedResult;
+
+        private Integer expectedStatusCode;
+        private String jsonPath;
+        private String expectedValue;
+        private String headerName;
+        private Long maxResponseTimeMs;
 
         public TestCase() {
         }
 
-        public TestCase(String name, String description, String testType, String expectedResult) {
+        public TestCase(String name, String description, String testType,
+                        Integer expectedStatusCode, String jsonPath,
+                        String expectedValue, String headerName,
+                        Long maxResponseTimeMs) {
             this.name = name;
             this.description = description;
             this.testType = testType;
-            this.expectedResult = expectedResult;
+            this.expectedStatusCode = expectedStatusCode;
+            this.jsonPath = jsonPath;
+            this.expectedValue = expectedValue;
+            this.headerName = headerName;
+            this.maxResponseTimeMs = maxResponseTimeMs;
         }
 
         public String getName() {
@@ -61,13 +75,44 @@ public class GenerateTestsResponseDTO {
             this.testType = testType;
         }
 
-        public String getExpectedResult() {
-            return expectedResult;
+        public Integer getExpectedStatusCode() {
+            return expectedStatusCode;
         }
 
-        public void setExpectedResult(String expectedResult) {
-            this.expectedResult = expectedResult;
+        public void setExpectedStatusCode(Integer expectedStatusCode) {
+            this.expectedStatusCode = expectedStatusCode;
+        }
+
+        public String getJsonPath() {
+            return jsonPath;
+        }
+
+        public void setJsonPath(String jsonPath) {
+            this.jsonPath = jsonPath;
+        }
+
+        public String getExpectedValue() {
+            return expectedValue;
+        }
+
+        public void setExpectedValue(String expectedValue) {
+            this.expectedValue = expectedValue;
+        }
+
+        public String getHeaderName() {
+            return headerName;
+        }
+
+        public void setHeaderName(String headerName) {
+            this.headerName = headerName;
+        }
+
+        public Long getMaxResponseTimeMs() {
+            return maxResponseTimeMs;
+        }
+
+        public void setMaxResponseTimeMs(Long maxResponseTimeMs) {
+            this.maxResponseTimeMs = maxResponseTimeMs;
         }
     }
 }
-
