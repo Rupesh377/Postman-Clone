@@ -44,8 +44,7 @@ public class WorkspaceMemberController {
     public ResponseEntity<MemberResponseDTO> updateRole(@PathVariable Long workspaceId, @PathVariable Long memberId,
             @RequestParam WorkspaceRole role, Authentication authentication) {
 
-        return ResponseEntity.ok(
-                memberService.updateRole(workspaceId, memberId, role, authentication));
+        return ResponseEntity.ok(memberService.updateRole(workspaceId, memberId, role, authentication));
     }
 
 
