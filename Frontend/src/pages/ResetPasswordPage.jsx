@@ -5,6 +5,18 @@ import InputField from '../components/InputField'
 import { resetPasswordApi } from '../api/authApi'
 import '../styles/authPage.css'
 
+function getStrength(pwd) {
+  if (!pwd) return 0
+  let score = 0
+  if (pwd.length >= 8) score++
+  if (/[A-Z]/.test(pwd)) score++
+  if (/[0-9]/.test(pwd)) score++
+  if (/[^A-Za-z0-9]/.test(pwd)) score++
+  return score
+}
+const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong']
+const STRENGTH_COLORS = ['', '#ef4444', '#f97316', '#eab308', '#22c55e']
+
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -15,6 +27,8 @@ export default function ResetPasswordPage() {
   const [serverError, setServerError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  const strength = getStrength(form.newPassword)
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -49,34 +63,42 @@ export default function ResetPasswordPage() {
     }
   }
 
+  // ── Missing token ─────────────────────────────────────────────────────────
   if (!token) {
     return (
       <AuthLayout title="Invalid Link" subtitle="This password reset link is not valid">
         <div className="auth-success-state">
           <div className="success-icon error-icon">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.5">
-              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
             </svg>
           </div>
           <p className="success-text">This reset link is invalid or has expired.</p>
-          <Link to="/forgot-password" className="btn btn-primary" style={{textDecoration:'none',textAlign:'center'}}>
+          <p className="success-subtext">Password reset links expire after 15 minutes.</p>
+          <Link to="/forgot-password" className="btn btn-primary" style={{ textDecoration: 'none', textAlign: 'center' }}>
             Request a new link
           </Link>
+          <p className="auth-switch">
+            <Link to="/login" className="link-accent">← Back to Sign In</Link>
+          </p>
         </div>
       </AuthLayout>
     )
   }
 
+  // ── Success screen ────────────────────────────────────────────────────────
   if (success) {
     return (
       <AuthLayout title="Password updated!" subtitle="Your password has been changed successfully">
         <div className="auth-success-state">
           <div className="success-icon">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="1.5">
-              <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+              <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
             </svg>
           </div>
-          <p className="success-text">Your password has been reset successfully. You can now sign in with your new password.</p>
+          <p className="success-text">
+            Your password has been reset successfully. You can now sign in with your new password.
+          </p>
           <button className="btn btn-primary" onClick={() => navigate('/login')}>
             Go to Sign In
           </button>
@@ -85,15 +107,21 @@ export default function ResetPasswordPage() {
     )
   }
 
+  // ── Form ──────────────────────────────────────────────────────────────────
   return (
     <AuthLayout title="Set new password" subtitle="Choose a strong password for your account">
       <form onSubmit={handleSubmit} className="auth-form" noValidate>
         {serverError && (
           <div className="alert alert-error" role="alert">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             {serverError}
+            {(serverError.toLowerCase().includes('expired') || serverError.toLowerCase().includes('invalid')) && (
+              <Link to="/forgot-password" className="link-accent" style={{ marginLeft: 8, fontSize: '12px' }}>
+                Request a new link →
+              </Link>
+            )}
           </div>
         )}
 
@@ -106,7 +134,25 @@ export default function ResetPasswordPage() {
           placeholder="Min. 8 characters"
           error={errors.newPassword}
           autoComplete="new-password"
+          autoFocus
         />
+
+        {form.newPassword && (
+          <div className="password-strength">
+            <div className="strength-bars">
+              {[1, 2, 3, 4].map(i => (
+                <div
+                  key={i}
+                  className="strength-bar"
+                  style={{ backgroundColor: i <= strength ? STRENGTH_COLORS[strength] : 'var(--border-mid)' }}
+                />
+              ))}
+            </div>
+            <span className="strength-label" style={{ color: STRENGTH_COLORS[strength] }}>
+              {STRENGTH_LABELS[strength]}
+            </span>
+          </div>
+        )}
 
         <InputField
           label="Confirm new password"
@@ -119,8 +165,13 @@ export default function ResetPasswordPage() {
           autoComplete="new-password"
         />
 
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? <span className="spinner" /> : 'Reset Password'}
+        <button type="submit" className="btn btn-primary" disabled={loading} aria-busy={loading}>
+          {loading ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <span className="spinner" />
+              Resetting…
+            </span>
+          ) : 'Reset Password'}
         </button>
 
         <p className="auth-switch">

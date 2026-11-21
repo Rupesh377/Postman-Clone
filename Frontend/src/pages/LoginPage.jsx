@@ -87,6 +87,7 @@ export default function LoginPage() {
           placeholder="you@example.com"
           error={errors.email}
           autoComplete="email"
+          autoFocus
         />
 
         <InputField
@@ -118,6 +119,10 @@ export default function LoginPage() {
         <p className="auth-switch">
           Don't have an account?{' '}
           <Link to="/register" className="link-accent">Create one</Link>
+        </p>
+        <p className="auth-switch" style={{ marginTop: '-4px' }}>
+          Need to verify your email?{' '}
+          <Link to="/resend-verification" className="link-accent">Resend verification link</Link>
         </p>
       </form>
     </AuthLayout>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import Modal from './Modal'
+import ConfirmDialog from './ConfirmDialog'
 import { useToast } from '../context/ToastContext'
 import { getHistoryApi, deleteHistoryItemApi, clearHistoryApi } from '../api/historyApi'
 
@@ -22,6 +23,7 @@ export default function HistoryModal({ onClose }) {
   const [totalPages, setTotal]= useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const [copiedId, setCopiedId] = useState(null)
 
@@ -53,8 +55,10 @@ export default function HistoryModal({ onClose }) {
     }
   }
 
-  const handleClear = async () => {
-    if (!window.confirm('Delete all history? This cannot be undone.')) return
+  const handleClear = () => setConfirmClear(true)
+
+  const doClear = async () => {
+    setConfirmClear(false)
     try {
       await clearHistoryApi()
       setRows([])
@@ -85,6 +89,15 @@ export default function HistoryModal({ onClose }) {
         )
       }
     >
+      <ConfirmDialog
+        open={confirmClear}
+        title="Clear all history?"
+        message="All request history entries will be permanently deleted. This cannot be undone."
+        confirmLabel="Clear all"
+        destructive
+        onConfirm={doClear}
+        onCancel={() => setConfirmClear(false)}
+      />
       {error && <div className="alert alert-error">{error}</div>}
 
       {rows.length === 0 && !loading && !error && (

@@ -1,6 +1,7 @@
 .auth-root {
   display: flex;
   min-height: 100vh;
+  background: var(--bg-dark, #0f0f0f);
 }
 
 .auth-left {
@@ -12,6 +13,31 @@
   align-items: center;
   justify-content: center;
   padding: 52px 48px;
+}
+
+/* Subtle radial glow behind left panel */
+.auth-left::before {
+  content: '';
+  position: absolute;
+  top: -120px;
+  left: -80px;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.auth-left::after {
+  content: '';
+  position: absolute;
+  bottom: -100px;
+  right: -60px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(249,115,22,0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .auth-left-content {
@@ -81,7 +107,7 @@
 
 /* right panel */
 .auth-right {
-  width: 460px;
+  width: 480px;
   flex-shrink: 0;
   background: var(--bg-panel);
   display: flex;
@@ -89,11 +115,20 @@
   justify-content: center;
   padding: 44px 36px;
   border-left: 1px solid var(--border);
+  position: relative;
 }
 
 .auth-card {
   width: 100%;
-  max-width: 360px;
+  max-width: 400px;
+  background: var(--bg-card, var(--bg-panel));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.3),
+    0 4px 16px rgba(0,0,0,0.25),
+    0 0 0 1px rgba(255,255,255,0.03) inset;
 }
 
 .auth-card-header {
@@ -104,15 +139,39 @@
 .auth-card-logo {
   display: flex;
   justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+}
+
+.auth-card-logo-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.auth-card-logo-label span {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.auth-card-divider {
+  width: 32px;
+  height: 2px;
+  background: var(--orange, #f97316);
+  border-radius: 2px;
+  margin: 0 auto 14px;
+  opacity: 0.7;
 }
 
 .auth-card-title {
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: -0.4px;
-  margin-bottom: 4px;
+  letter-spacing: -0.5px;
+  margin-bottom: 5px;
 }
 
 .auth-card-subtitle {
@@ -136,5 +195,11 @@
     border-left: none;
     border-top: 1px solid var(--border);
     padding: 28px 20px;
+  }
+  .auth-card {
+    border: none;
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
   }
 }

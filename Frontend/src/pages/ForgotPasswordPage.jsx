@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <AuthLayout title="Check your email" subtitle="We've sent you a reset link">
+      <AuthLayout title="Check your email" subtitle="A reset link may have been sent to your inbox">
         <div className="auth-success-state">
           <div className="success-icon">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF6C37" strokeWidth="1.5">
@@ -46,10 +46,10 @@ export default function ForgotPasswordPage() {
             </svg>
           </div>
           <p className="success-text">
-            We sent a password reset link to <strong>{email}</strong>.
-            Check your inbox and follow the instructions.
+            If an account exists for <strong>{email}</strong>, a password reset link has been sent.
+            Check your inbox and spam folder.
           </p>
-          <p className="success-subtext">Didn't receive it? Check your spam folder.</p>
+          <p className="success-subtext">The link expires after a short time for security.</p>
           <button
             className="btn btn-secondary"
             onClick={() => { setSuccess(false); setEmail('') }}
@@ -90,8 +90,13 @@ export default function ForgotPasswordPage() {
           autoComplete="email"
         />
 
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? <span className="spinner" /> : 'Send Reset Link'}
+        <button type="submit" className="btn btn-primary" disabled={loading} aria-busy={loading}>
+          {loading ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <span className="spinner" />
+              Sending…
+            </span>
+          ) : 'Send Reset Link'}
         </button>
 
         <p className="auth-switch">

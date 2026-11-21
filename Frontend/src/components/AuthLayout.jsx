@@ -39,9 +39,11 @@ export default function AuthLayout({ children, title, subtitle }) {
       <div className="auth-right">
         <div className="auth-card">
           <div className="auth-card-header">
-            <div className="auth-card-logo">
-              <AppLogo size={28} />
+            <div className="auth-card-logo-label">
+              <AppLogo size={24} />
+              <span>APIForge</span>
             </div>
+            <div className="auth-card-divider" />
             <h2 className="auth-card-title">{title}</h2>
             {subtitle && <p className="auth-card-subtitle">{subtitle}</p>}
           </div>

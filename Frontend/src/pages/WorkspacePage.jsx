@@ -4,6 +4,7 @@ import Topbar from '../components/Topbar'
 import Sidebar from '../components/Sidebar'
 import RequestBuilder from '../components/RequestBuilder'
 import Modal from '../components/Modal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { WorkspaceProvider, useWorkspace } from '../context/WorkspaceContext'
 import { EnvironmentProvider } from '../context/EnvironmentContext'
 import { useToast } from '../context/ToastContext'
@@ -27,6 +28,7 @@ function MembersPanel({ workspaceId, onClose }) {
   const [inviteRole, setInviteRole]   = useState('EDITOR')
   const [inviting, setInviting]       = useState(false)
   const [inviteErr, setInviteErr]     = useState('')
+  const [confirmMember, setConfirmMember] = useState(null)
 
   useEffect(() => {
     getMembersApi(workspaceId)
@@ -51,8 +53,11 @@ function MembersPanel({ workspaceId, onClose }) {
     }
   }
 
-  const handleRemove = async (member) => {
-    if (!window.confirm(`Remove ${member.name} from this workspace?`)) return
+  const handleRemove = (member) => setConfirmMember(member)
+
+  const doRemoveMember = async () => {
+    const member = confirmMember
+    setConfirmMember(null)
     try {
       await removeMemberApi(workspaceId, member.id)
       setMembers((prev) => prev.filter((m) => m.id !== member.id))
@@ -75,6 +80,15 @@ function MembersPanel({ workspaceId, onClose }) {
 
   return (
     <Modal title="Workspace Members" onClose={onClose}>
+      <ConfirmDialog
+        open={!!confirmMember}
+        title="Remove member?"
+        message={confirmMember ? `${confirmMember.name} will be removed from this workspace.` : ''}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={doRemoveMember}
+        onCancel={() => setConfirmMember(null)}
+      />
       {/* Invite form */}
       <form onSubmit={handleInvite}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginBottom: '4px' }}>
@@ -261,6 +275,7 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
   const [activeTabId, setActiveTabId]   = useState(null)
   const [showMembers, setShowMembers]   = useState(false)
   const [showEdit, setShowEdit]         = useState(false)
+  const [discardTabId, setDiscardTabId] = useState(null) // tab pending discard confirm
 
   // Load collections on mount so handleNewRequest can default to collections[0].
   useEffect(() => {
@@ -343,11 +358,16 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
     const tabToClose = openTabs.find((t) => t.tabId === tabIdToClose)
     if (!tabToClose) return
     if (tabToClose.dirty) {
-      if (!window.confirm('Discard unsaved changes?')) {
-        return
-      }
+      setDiscardTabId(tabIdToClose)
+      return
     }
     closeTabsByPredicate((t) => t.tabId === tabIdToClose)
+  }
+
+  const doDiscardTab = () => {
+    const id = discardTabId
+    setDiscardTabId(null)
+    closeTabsByPredicate((t) => t.tabId === id)
   }
 
   const handleRequestDeleted = (requestId) => {
@@ -396,6 +416,15 @@ function WorkspaceContent({ workspace, onWorkspaceSaved }) {
 
   return (
       <div className="app-shell" style={{ flexDirection: 'column' }}>
+        <ConfirmDialog
+          open={!!discardTabId}
+          title="Discard changes?"
+          message="This request has unsaved changes. They will be lost."
+          confirmLabel="Discard"
+          destructive
+          onConfirm={doDiscardTab}
+          onCancel={() => setDiscardTabId(null)}
+        />
         {/* Topbar — title is editable; saves via PUT /api/workspaces/:id */}
         <Topbar
           title={workspace?.name}
@@ -580,6 +609,15 @@ export default function WorkspacePage() {
   if (wsLoading) {
     return (
       <div className="app-shell" style={{ flexDirection: 'column' }}>
+        <ConfirmDialog
+          open={!!discardTabId}
+          title="Discard changes?"
+          message="This request has unsaved changes. They will be lost."
+          confirmLabel="Discard"
+          destructive
+          onConfirm={doDiscardTab}
+          onCancel={() => setDiscardTabId(null)}
+        />
         <Topbar onMenuToggle={() => {}} />
         <div className="page-loader"><div className="spinner-lg" /></div>
       </div>
@@ -589,6 +627,15 @@ export default function WorkspacePage() {
   if (wsError) {
     return (
       <div className="app-shell" style={{ flexDirection: 'column' }}>
+        <ConfirmDialog
+          open={!!discardTabId}
+          title="Discard changes?"
+          message="This request has unsaved changes. They will be lost."
+          confirmLabel="Discard"
+          destructive
+          onConfirm={doDiscardTab}
+          onCancel={() => setDiscardTabId(null)}
+        />
         <Topbar onMenuToggle={() => {}} />
         <div className="empty-state" style={{ flex: 1 }}>
           <div className="empty-state-title">Something went wrong</div>
