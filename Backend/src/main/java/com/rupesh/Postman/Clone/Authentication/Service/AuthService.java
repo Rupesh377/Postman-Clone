@@ -74,9 +74,9 @@ public class AuthService {
             throw new BadRequestException("Please login using " + user.getProvider());
         }
 
-        if (!user.isEmailVerified()) {
-            throw new BadRequestException("Please verify your email before logging in.");
-        }
+//        if (!user.isEmailVerified()) {
+//            throw new BadRequestException("Please verify your email before logging in.");
+//        }
 
         try {
             authenticationManager.authenticate(
@@ -113,9 +113,9 @@ public class AuthService {
 
         User user = refreshToken.getUser();
 
-        if (!user.isEmailVerified()) {
-            throw new BadRequestException("Please verify your email before refreshing tokens.");
-        }
+//        if (!user.isEmailVerified()) {
+//            throw new BadRequestException("Please verify your email before refreshing tokens.");
+//        }
 
         String accessToken = jwtService.generateAccessToken(user);
 
