@@ -5,6 +5,7 @@ import { deleteRequestApi, createRequestApi, updateRequestApi } from '../api/req
 import { updateCollectionApi, updateFolderApi } from '../api/collectionApi'
 import Modal from './Modal'
 import RunnerModal from './RunnerModal'
+import ConfirmDialog from './ConfirmDialog'
 import '../styles/app.css'
 
 const FolderIcon = ({ open }) => (
@@ -231,6 +232,8 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
   const [showMenu, setShowMenu] = useState(false)
   const [folderName, setFolderName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [confirmFolder, setConfirmFolder] = useState(null)   // folder pending delete
+  const [confirmRequest, setConfirmRequest] = useState(null) // { request, colId, folderId }
 
   const {
     folders,
@@ -267,8 +270,11 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
     }
   }
 
-  const handleDeleteFolder = async (folder) => {
-    if (!window.confirm(`Delete folder "${folder.name}" and its requests?`)) return
+  const handleDeleteFolder = (folder) => setConfirmFolder(folder)
+
+  const doDeleteFolder = async () => {
+    const folder = confirmFolder
+    setConfirmFolder(null)
     try {
       await removeFolder(collection.id, folder.id)
       onFolderDeleted?.(folder.id)
@@ -286,8 +292,12 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
     }
   }
 
-  const handleDeleteRequest = async (request, colId, folderId) => {
-    if (!window.confirm(`Delete "${request.name || request.url}"?`)) return
+  const handleDeleteRequest = (request, colId, folderId) =>
+    setConfirmRequest({ request, colId, folderId })
+
+  const doDeleteRequest = async () => {
+    const { request, colId, folderId } = confirmRequest
+    setConfirmRequest(null)
     try {
       await deleteRequestApi(request.id)
       removeRequestFromStore(colId, folderId, request.id)
@@ -299,6 +309,24 @@ function CollectionNode({ collection, activeRequestId, onSelectRequest, onDelete
 
   return (
     <div style={{ marginBottom: '2px' }}>
+      <ConfirmDialog
+        open={!!confirmFolder}
+        title="Delete folder?"
+        message={confirmFolder ? `"${confirmFolder.name}" and all its requests will be permanently deleted.` : ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={doDeleteFolder}
+        onCancel={() => setConfirmFolder(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmRequest}
+        title="Delete request?"
+        message={confirmRequest ? `"${confirmRequest.request.name || confirmRequest.request.url}" will be permanently deleted.` : ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={doDeleteRequest}
+        onCancel={() => setConfirmRequest(null)}
+      />
       <div className="tree-item" onClick={toggle} title={collection.name}>
         <ChevronIcon open={open} />
         <span className="tree-item-icon" style={{ color: 'var(--orange)' }}>
@@ -418,6 +446,7 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
   const [collectionDesc, setCollectionDesc] = useState('')
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [confirmCollection, setConfirmCollection] = useState(null)
 
   const { collections, loading, error, loadCollections, addCollection, removeCollection, addRequestToStore, addRequestToFolderStore, addFolder } = useWorkspace()
 
@@ -472,8 +501,11 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
     }
   }
 
-  const handleDeleteCollection = async (collection) => {
-    if (!window.confirm(`Delete "${collection.name}" and all its folders and requests? This cannot be undone.`)) return
+  const handleDeleteCollection = (collection) => setConfirmCollection(collection)
+
+  const doDeleteCollection = async () => {
+    const collection = confirmCollection
+    setConfirmCollection(null)
     try {
       await removeCollection(collection.id)
       onCollectionDeleted?.(collection.id)
@@ -493,6 +525,15 @@ export default function Sidebar({ workspace, onSelectRequest, activeRequestId, c
 
   return (
     <aside className={`sidebar${collapsed ? ' collapsed' : ''}`}>
+      <ConfirmDialog
+        open={!!confirmCollection}
+        title="Delete collection?"
+        message={confirmCollection ? `"${confirmCollection.name}" and all its folders and requests will be permanently deleted.` : ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={doDeleteCollection}
+        onCancel={() => setConfirmCollection(null)}
+      />
       <div className="sidebar-header">
         <div className="sidebar-workspace-name-label">
           {workspace?.name || 'Workspace'}

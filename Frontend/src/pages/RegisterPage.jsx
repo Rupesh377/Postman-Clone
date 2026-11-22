@@ -7,6 +7,19 @@ import { registerApi } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import '../styles/authPage.css'
 
+function getStrength(pwd) {
+  if (!pwd) return 0
+  let score = 0
+  if (pwd.length >= 8) score++
+  if (/[A-Z]/.test(pwd)) score++
+  if (/[0-9]/.test(pwd)) score++
+  if (/[^A-Za-z0-9]/.test(pwd)) score++
+  return score
+}
+
+const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong']
+const STRENGTH_COLORS = ['', '#ef4444', '#f97316', '#eab308', '#22c55e']
+
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
@@ -15,6 +28,8 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
+  // After successful registration — show account info & verification notice
+  const [registered, setRegistered] = useState(null) // { email, emailVerified }
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -36,19 +51,22 @@ export default function RegisterPage() {
     e.preventDefault()
     if (loading) return
     const validationErrors = validate()
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors)
-      return
-    }
+    if (Object.keys(validationErrors).length > 0) { setErrors(validationErrors); return }
+
     setLoading(true)
     try {
       const res = await registerApi(form.name.trim(), form.email.trim(), form.password)
       const data = res.data || {}
-      if (data.user) {
-        data.user.provider = 'LOCAL'
-      }
+      if (data.user) data.user.provider = 'LOCAL'
+
+      const emailVerified = data.user?.emailVerified ?? false
+      const registeredEmail = data.user?.email || form.email.trim()
+
+      // Log the user in (backend issues JWT regardless of verification status)
       login(data)
-      navigate('/dashboard')
+
+      // Show post-registration screen — user chooses when to continue
+      setRegistered({ email: registeredEmail, emailVerified })
     } catch (err) {
       const msg = err.response?.data?.message || 'Registration failed. Try again.'
       setServerError(msg)
@@ -57,28 +75,62 @@ export default function RegisterPage() {
     }
   }
 
-  // Password strength indicator
-  const getStrength = (pwd) => {
-    if (!pwd) return 0
-    let score = 0
-    if (pwd.length >= 8) score++
-    if (/[A-Z]/.test(pwd)) score++
-    if (/[0-9]/.test(pwd)) score++
-    if (/[^A-Za-z0-9]/.test(pwd)) score++
-    return score
+  const strength = getStrength(form.password)
+
+  // ── Post-registration success screen ──────────────────────────────────────
+  if (registered) {
+    return (
+      <AuthLayout title="Account created!" subtitle="Welcome to APIForge">
+        <div className="auth-success-state">
+          <div className="success-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="1.5">
+              <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+
+          <p className="success-text">
+            Your account has been created for <strong>{registered.email}</strong>.
+          </p>
+
+          {!registered.emailVerified && (
+            <div className="alert" role="note" style={{
+              background: 'rgba(255,108,55,0.08)',
+              border: '1px solid rgba(255,108,55,0.25)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 14px',
+              fontSize: '12.5px',
+              color: 'var(--text-secondary)',
+              textAlign: 'left',
+              width: '100%',
+              lineHeight: 1.6,
+            }}>
+              <strong style={{ color: 'var(--orange)' }}>Email not yet verified.</strong>
+              {' '}Your account works, but you can verify your email address at any time.{' '}
+              <Link to="/resend-verification" className="link-accent" style={{ fontSize: '12.5px' }}>
+                Send verification link →
+              </Link>
+            </div>
+          )}
+
+          <p className="success-subtext">Your account is ready. Click below to continue.</p>
+
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+            Go to Dashboard
+          </button>
+        </div>
+      </AuthLayout>
+    )
   }
 
-  const strength = getStrength(form.password)
-  const strengthLabels = ['', 'Weak', 'Fair', 'Good', 'Strong']
-  const strengthColors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e']
-
+  // ── Registration form ─────────────────────────────────────────────────────
   return (
     <AuthLayout title="Create your account" subtitle="Join developers building with APIForge">
       <form onSubmit={handleSubmit} className="auth-form" noValidate>
         {serverError && (
           <div className="alert alert-error" role="alert">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             {serverError}
           </div>
@@ -93,6 +145,7 @@ export default function RegisterPage() {
           placeholder="John Doe"
           error={errors.name}
           autoComplete="name"
+          autoFocus
         />
 
         <InputField
@@ -124,18 +177,23 @@ export default function RegisterPage() {
                 <div
                   key={i}
                   className="strength-bar"
-                  style={{ backgroundColor: i <= strength ? strengthColors[strength] : 'var(--border-mid)' }}
+                  style={{ backgroundColor: i <= strength ? STRENGTH_COLORS[strength] : 'var(--border-mid)' }}
                 />
               ))}
             </div>
-            <span className="strength-label" style={{ color: strengthColors[strength] }}>
-              {strengthLabels[strength]}
+            <span className="strength-label" style={{ color: STRENGTH_COLORS[strength] }}>
+              {STRENGTH_LABELS[strength]}
             </span>
           </div>
         )}
 
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? <span className="spinner" /> : 'Create Account'}
+        <button type="submit" className="btn btn-primary" disabled={loading} aria-busy={loading}>
+          {loading ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <span className="spinner" />
+              Creating account…
+            </span>
+          ) : 'Create Account'}
         </button>
 
         <OAuthButtons />

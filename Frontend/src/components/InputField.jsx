@@ -10,6 +10,7 @@ export default function InputField({
   placeholder,
   error,
   autoComplete,
+  autoFocus,
 }) {
   const [showPassword, setShowPassword] = useState(false)
   const isPassword = type === 'password'
@@ -27,6 +28,7 @@ export default function InputField({
           onChange={onChange}
           placeholder={placeholder}
           autoComplete={autoComplete}
+          autoFocus={autoFocus}
           className="input-field"
         />
         {isPassword && (

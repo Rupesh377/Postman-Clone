@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import Topbar from '../components/Topbar'
 import Modal from '../components/Modal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import {
   getMyWorkspacesApi,
   createWorkspaceApi,
@@ -72,6 +73,7 @@ export default function DashboardPage() {
   const [error, setError] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [deleteId, setDeleteId] = useState(null) // id being deleted — for per-card loading state
+  const [confirmWs, setConfirmWs] = useState(null) // workspace pending delete
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('newest')
 
@@ -118,13 +120,15 @@ export default function DashboardPage() {
     // Stop the click from bubbling up to the card and triggering navigation
     e.preventDefault()
     e.stopPropagation()
+    setConfirmWs(ws)
+  }
 
-    if (!window.confirm(`Delete "${ws.name}"?\n\nThis will permanently remove the workspace and all its collections and requests.`)) return
-
+  const doDeleteWorkspace = async () => {
+    const ws = confirmWs
+    setConfirmWs(null)
     setDeleteId(ws.id)
     try {
       await deleteWorkspaceApi(ws.id)
-      // Optimistically remove from UI only after confirmed server success
       setWorkspaces((prev) => prev.filter((w) => w.id !== ws.id))
     } catch (err) {
       const status = err.response?.status
@@ -132,10 +136,9 @@ export default function DashboardPage() {
       if (status === 403) {
         toast.error('You don\'t have permission to delete this workspace.')
       } else if (status === 404) {
-        // Already gone — remove from UI anyway
         setWorkspaces((prev) => prev.filter((w) => w.id !== ws.id))
       } else {
-        toast.error(msg || `Delete failed (${status ?? 'network error'}). Check the console for details.`)
+        toast.error(msg || `Delete failed (${status ?? 'network error'}).`)
         console.error('[deleteWorkspace]', err)
       }
     } finally {
@@ -195,6 +198,15 @@ export default function DashboardPage() {
   return (
     <div className="app-shell" style={{ flexDirection: 'column' }}>
       <Topbar />
+      <ConfirmDialog
+        open={!!confirmWs}
+        title="Delete workspace?"
+        message={confirmWs ? `"${confirmWs.name}" and all its collections and requests will be permanently deleted. This cannot be undone.` : ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={doDeleteWorkspace}
+        onCancel={() => setConfirmWs(null)}
+      />
 
       <div className="dashboard-page">
         <div className="dash-header">

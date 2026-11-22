@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Modal from './Modal'
+import ConfirmDialog from './ConfirmDialog'
 import { useEnvironment } from '../context/EnvironmentContext'
 import '../styles/environment.css'
 
@@ -185,6 +186,7 @@ function EnvironmentManagerModal({ onClose }) {
   const [newEnvName, setNewEnvName] = useState('')
   const [creating, setCreating] = useState(false)
   const [createErr, setCreateErr] = useState('')
+  const [confirmDeleteEnv, setConfirmDeleteEnv] = useState(null)
   const newEnvInputRef = useRef(null)
 
   useEffect(() => {
@@ -209,8 +211,11 @@ function EnvironmentManagerModal({ onClose }) {
     }
   }
 
-  const handleDelete = async (env) => {
-    if (!window.confirm(`Delete environment "${env.name}"? This cannot be undone.`)) return
+  const handleDelete = (env) => setConfirmDeleteEnv(env)
+
+  const doDeleteEnv = async () => {
+    const env = confirmDeleteEnv
+    setConfirmDeleteEnv(null)
     try {
       await removeEnvironment(env.id)
       if (editingEnvId === env.id) {
@@ -250,123 +255,132 @@ function EnvironmentManagerModal({ onClose }) {
     <Modal title="Environments" onClose={onClose} wide
       footer={<button className="btn-sm btn-sm-ghost" onClick={onClose} type="button">Close</button>}
     >
-        {/* Create new env */}
-        <form onSubmit={handleCreate}>
-          <div className="env-create-row">
-            <input
-              ref={newEnvInputRef}
-              className="env-create-input"
-              placeholder="Environment name"
-              value={newEnvName}
-              onChange={(e) => { setNewEnvName(e.target.value); setCreateErr('') }}
-              aria-label="New environment name"
-            />
-            <button
-              type="submit"
-              className="btn-sm btn-sm-primary"
-              disabled={creating || !newEnvName.trim()}
-            >
-              {creating ? 'Creating' : 'Create'}
-            </button>
-          </div>
-          {createErr && (
-            <div className="field-error" style={{ marginTop: '4px' }}>{createErr}</div>
-          )}
-        </form>
-
-        <div className="settings-divider" />
-
-        {/* Environment list */}
-        {envsLoading ? (
-          <div className="history-loading">
-            <div className="spinner-lg" />
-          </div>
-        ) : environments.length === 0 ? (
-          <div className="env-list-empty">No environments yet — create one above.</div>
-        ) : (
-          <div className="env-list" role="listbox" aria-label="Environments">
-            {environments.map((env) => (
-              <div
-                key={env.id}
-                className={`env-list-item ${editingEnvId === env.id ? 'active' : ''}`}
-                onClick={() => setEditingEnvId(env.id)}
-                role="option"
-                aria-selected={editingEnvId === env.id}
-              >
-                <span className="env-list-item-name">{env.name}</span>
-                <span className="env-list-item-count">
-                  {(env.variables || []).length} var{(env.variables || []).length !== 1 ? 's' : ''}
-                </span>
-                <div className="env-list-item-actions">
-                  {/* Select / deselect as active */}
-                  <button
-                    className="btn-icon"
-                    title={activeEnvironment?.id === env.id ? 'Deselect' : 'Use this environment'}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      selectEnvironment(activeEnvironment?.id === env.id ? null : env.id)
-                    }}
-                    aria-label={activeEnvironment?.id === env.id ? 'Deselect environment' : 'Select environment'}
-                  >
-                    {activeEnvironment?.id === env.id ? (
-                      // Checkmark (active)
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    ) : (
-                      // Circle (inactive)
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="9" />
-                      </svg>
-                    )}
-                  </button>
-                  {/* Delete */}
-                  <button
-                    className="btn-icon"
-                    style={{ color: 'var(--text-subtle)' }}
-                    title="Delete environment"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(env) }}
-                    aria-label={`Delete ${env.name}`}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14H6L5 6" />
-                      <path d="M10 11v6M14 11v6" />
-                      <path d="M9 6V4h6v2" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      <ConfirmDialog
+        open={!!confirmDeleteEnv}
+        title="Delete environment?"
+        message={confirmDeleteEnv ? `"${confirmDeleteEnv.name}" and all its variables will be permanently deleted.` : ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={doDeleteEnv}
+        onCancel={() => setConfirmDeleteEnv(null)}
+      />
+      {/* Create new env */}
+      <form onSubmit={handleCreate}>
+        <div className="env-create-row">
+          <input
+            ref={newEnvInputRef}
+            className="env-create-input"
+            placeholder="Environment name"
+            value={newEnvName}
+            onChange={(e) => { setNewEnvName(e.target.value); setCreateErr('') }}
+            aria-label="New environment name"
+          />
+          <button
+            type="submit"
+            className="btn-sm btn-sm-primary"
+            disabled={creating || !newEnvName.trim()}
+          >
+            {creating ? 'Creating' : 'Create'}
+          </button>
+        </div>
+        {createErr && (
+          <div className="field-error" style={{ marginTop: '4px' }}>{createErr}</div>
         )}
+      </form>
 
-        {/* Variables panel for the selected environment */}
-        {editingEnv && (
-          <>
-            <div className="settings-divider" />
-            <div className="env-vars-section">
-              <div className="env-vars-header">
-                <span className="env-vars-title">
-                  Variables — <span style={{ color: 'var(--text-secondary)', textTransform: 'none', letterSpacing: 0 }}>{editingEnv.name}</span>
-                </span>
-                <span className="env-vars-hint">Use <code style={{ color: 'var(--orange)', fontSize: '11px' }}>{'{{variableName}}'}</code> in your request URLs &amp; headers</span>
-              </div>
-              <div className="env-vars-table-wrap">
-                <EnvVarTable
-                  key={editingEnv.id}
-                  variables={editingEnv.variables}
-                  environmentId={editingEnv.id}
-                  onAdd={handleAddVar}
-                  onEdit={handleEditVar}
-                  onRemove={handleRemoveVar}
-                />
+      <div className="settings-divider" />
+
+      {/* Environment list */}
+      {envsLoading ? (
+        <div className="history-loading">
+          <div className="spinner-lg" />
+        </div>
+      ) : environments.length === 0 ? (
+        <div className="env-list-empty">No environments yet — create one above.</div>
+      ) : (
+        <div className="env-list" role="listbox" aria-label="Environments">
+          {environments.map((env) => (
+            <div
+              key={env.id}
+              className={`env-list-item ${editingEnvId === env.id ? 'active' : ''}`}
+              onClick={() => setEditingEnvId(env.id)}
+              role="option"
+              aria-selected={editingEnvId === env.id}
+            >
+              <span className="env-list-item-name">{env.name}</span>
+              <span className="env-list-item-count">
+                {(env.variables || []).length} var{(env.variables || []).length !== 1 ? 's' : ''}
+              </span>
+              <div className="env-list-item-actions">
+                {/* Select / deselect as active */}
+                <button
+                  className="btn-icon"
+                  title={activeEnvironment?.id === env.id ? 'Deselect' : 'Use this environment'}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    selectEnvironment(activeEnvironment?.id === env.id ? null : env.id)
+                  }}
+                  aria-label={activeEnvironment?.id === env.id ? 'Deselect environment' : 'Select environment'}
+                >
+                  {activeEnvironment?.id === env.id ? (
+                    // Checkmark (active)
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    // Circle (inactive)
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="9" />
+                    </svg>
+                  )}
+                </button>
+                {/* Delete */}
+                <button
+                  className="btn-icon"
+                  style={{ color: 'var(--text-subtle)' }}
+                  title="Delete environment"
+                  onClick={(e) => { e.stopPropagation(); handleDelete(env) }}
+                  aria-label={`Delete ${env.name}`}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                    <path d="M10 11v6M14 11v6" />
+                    <path d="M9 6V4h6v2" />
+                  </svg>
+                </button>
               </div>
             </div>
-          </>
-        )}
+          ))}
+        </div>
+      )}
 
-      </Modal>
+      {/* Variables panel for the selected environment */}
+      {editingEnv && (
+        <>
+          <div className="settings-divider" />
+          <div className="env-vars-section">
+            <div className="env-vars-header">
+              <span className="env-vars-title">
+                Variables — <span style={{ color: 'var(--text-secondary)', textTransform: 'none', letterSpacing: 0 }}>{editingEnv.name}</span>
+              </span>
+              <span className="env-vars-hint">Use <code style={{ color: 'var(--orange)', fontSize: '11px' }}>{'{{variableName}}'}</code> in your request URLs &amp; headers</span>
+            </div>
+            <div className="env-vars-table-wrap">
+              <EnvVarTable
+                key={editingEnv.id}
+                variables={editingEnv.variables}
+                environmentId={editingEnv.id}
+                onAdd={handleAddVar}
+                onEdit={handleEditVar}
+                onRemove={handleRemoveVar}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+    </Modal>
   )
 }
 

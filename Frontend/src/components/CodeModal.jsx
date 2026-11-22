@@ -21,11 +21,34 @@ function buildFetch(method, url, headers, body) {
   return `fetch('${url}', ${optsStr})\n  .then(r => r.json())\n  .then(console.log)`
 }
 
+function buildAxios(method, url, headers, body) {
+  const m = method.toLowerCase()
+  const lines = [`import axios from 'axios'`, ``]
+  const config = {}
+  if (headers) { try { config.headers = JSON.parse(headers) } catch {} }
+  const hasBody = body && (m === 'post' || m === 'put' || m === 'patch')
+  if (hasBody) {
+    lines.push(`axios.${m}('${url}', ${body},`)
+    lines.push(`  ${JSON.stringify(config, null, 2).replace(/\n/g, '\n  ')}`)
+    lines.push(`)`)
+  } else {
+    lines.push(`axios.${m}('${url}',`)
+    lines.push(`  ${JSON.stringify(config, null, 2).replace(/\n/g, '\n  ')}`)
+    lines.push(`)`)
+  }
+  lines.push(`  .then(res => console.log(res.data))`)
+  lines.push(`  .catch(err => console.error(err))`)
+  return lines.join('\n')
+}
+
 export default function CodeModal({ url, method, headers, body, onClose }) {
+  const [tab, setTab] = useState('curl')
   const [copied, setCopied] = useState(false)
   const snippet = tab === 'curl'
     ? buildCurl(method, url, headers, body)
-    : buildFetch(method, url, headers, body)
+    : tab === 'fetch'
+      ? buildFetch(method, url, headers, body)
+      : buildAxios(method, url, headers, body)
 
   const handleCopy = async () => {
     let ok = false
@@ -55,10 +78,14 @@ export default function CodeModal({ url, method, headers, body, onClose }) {
   return (
     <Modal title="Code snippet" onClose={onClose} wide>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        {['curl', 'fetch'].map((t) => (
-          <button key={t} className={`btn-sm ${tab === t ? 'btn-sm-primary' : 'btn-sm-ghost'}`}
-            style={{ height: 24, fontSize: 11 }} onClick={() => { setTab(t); setCopied(false) }}>
-            {t === 'curl' ? 'cURL' : 'fetch (JS)'}
+        {[
+          { id: 'curl', label: 'cURL' },
+          { id: 'fetch', label: 'fetch (JS)' },
+          { id: 'axios', label: 'axios (JS)' },
+        ].map(({ id, label }) => (
+          <button key={id} className={`btn-sm ${tab === id ? 'btn-sm-primary' : 'btn-sm-ghost'}`}
+            style={{ height: 24, fontSize: 11 }} onClick={() => { setTab(id); setCopied(false) }}>
+            {label}
           </button>
         ))}
       </div>

@@ -5,12 +5,14 @@ import { SettingsProvider } from './context/SettingsContext'
 import SettingsDrawer from './components/SettingsDrawer'
 import ProtectedRoute from './components/ProtectedRoute'
 
-// Auth pages (already built)
-import LoginPage         from './pages/LoginPage'
-import RegisterPage      from './pages/RegisterPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import OAuthSuccessPage  from './pages/OAuthSuccessPage'
+// Auth pages
+import LoginPage              from './pages/LoginPage'
+import RegisterPage           from './pages/RegisterPage'
+import ForgotPasswordPage     from './pages/ForgotPasswordPage'
+import ResetPasswordPage      from './pages/ResetPasswordPage'
+import OAuthSuccessPage       from './pages/OAuthSuccessPage'
+import VerifyEmailPage        from './pages/VerifyEmailPage'
+import ResendVerificationPage from './pages/ResendVerificationPage'
 
 // App pages
 import DashboardPage  from './pages/DashboardPage'
@@ -32,7 +34,9 @@ function App() {
           <Route path="/register"        element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password"  element={<ResetPasswordPage />} />
-          <Route path="/oauth/success"   element={<OAuthSuccessPage />} />
+          <Route path="/oauth/success"        element={<OAuthSuccessPage />} />
+          <Route path="/verify-email"         element={<VerifyEmailPage />} />
+          <Route path="/resend-verification"  element={<ResendVerificationPage />} />
 
           {/* Protected routes */}
           <Route path="/dashboard" element={
