@@ -609,15 +609,6 @@ export default function WorkspacePage() {
   if (wsLoading) {
     return (
       <div className="app-shell" style={{ flexDirection: 'column' }}>
-        <ConfirmDialog
-          open={!!discardTabId}
-          title="Discard changes?"
-          message="This request has unsaved changes. They will be lost."
-          confirmLabel="Discard"
-          destructive
-          onConfirm={doDiscardTab}
-          onCancel={() => setDiscardTabId(null)}
-        />
         <Topbar onMenuToggle={() => {}} />
         <div className="page-loader"><div className="spinner-lg" /></div>
       </div>
@@ -627,15 +618,6 @@ export default function WorkspacePage() {
   if (wsError) {
     return (
       <div className="app-shell" style={{ flexDirection: 'column' }}>
-        <ConfirmDialog
-          open={!!discardTabId}
-          title="Discard changes?"
-          message="This request has unsaved changes. They will be lost."
-          confirmLabel="Discard"
-          destructive
-          onConfirm={doDiscardTab}
-          onCancel={() => setDiscardTabId(null)}
-        />
         <Topbar onMenuToggle={() => {}} />
         <div className="empty-state" style={{ flex: 1 }}>
           <div className="empty-state-title">Something went wrong</div>
