@@ -131,13 +131,24 @@ public class ApiTestRunnerService {
         if (body == null || body.isBlank() || path == null || path.isBlank()) {
             return null;
         }
-
         JsonNode current = objectMapper.readTree(body);
-        for (String part : path.split("\\.")) {
+
+        if (path.startsWith("$")) {
+            path = path.substring(1);
+        }
+        if (path.startsWith(".")) {
+            path = path.substring(1);
+        }
+        if (path.isBlank()) {
+            return current;
+        }
+        for (String part : path.split("\\."))
+        {
             if (current == null || !current.isObject()) {
                 return null;
             }
             current = current.get(part);
+
             if (current == null || current.isNull()) {
                 return null;
             }
